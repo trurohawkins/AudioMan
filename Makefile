@@ -19,9 +19,11 @@ libHelper.a:
 	cp ../libHelper.a .
 
 clean:
+	rm audioTest
 	rm *.o
 
 fclean:
+	rm audioTest
 	rm *.o
 	rm AudioMan.h
 	rm libAudioMan.a
