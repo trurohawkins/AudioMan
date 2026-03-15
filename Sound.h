@@ -4,6 +4,7 @@
 #include <portaudio.h>
 #include <sndfile.h>
 #define SOUND_MAX 256
+#define EVENT_MAX 256
 
 typedef struct Sound {
 	//immutable
@@ -25,6 +26,20 @@ typedef struct Sound {
 } Sound;
 
 typedef struct {
+	int type;
+	int data;
+
+	long long nextTriggerFrame;
+	bool scheduled;
+	long long intervalFrames;
+} AudioEvent;
+
+typedef struct {
+	AudioEvent events[EVENT_MAX];
+	int eventNum;
+} AudioEventScheduler;
+
+typedef struct {
 	Sound *sound;
 	long readFrames;
 	long long bufferOffset;
@@ -42,6 +57,9 @@ int processAudioFile(char *file, bool loop);
 void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
+void unScheduleAudio(int sound);
+void addAudioEvent(AudioEvent se);
+void removeAudioEvent(int type, int data);
 void freeSound(void *snd);
 
 //Frames PerBuffer
@@ -78,6 +96,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
                           PaStreamCallbackFlags statusFlags,
                           void *userData);
 void checkAudioCommands();
+void spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
 Voice *findFreeMixSpot();
 void changeVolume(int group, float vol);
 void changeVolGroup(Sound *s, int group);

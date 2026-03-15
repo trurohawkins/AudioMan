@@ -83,15 +83,16 @@ void scheduleAudio(int sound, double frequency) {
 		ac.data = frequency;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
 	}
-	/*
-	Sound s = sounds->bank[sound];
-	s.scheduled = true;
-	s.intervalFrames = (long long)(aMan->sampleRate * frequency / aMan->bpm);
-	s.nextTriggerFrame = 0;
-	s.active = false;
-	s.bufferOffset = 0;
-	//playAudio(s);
-	*/
+}
+
+void unScheduleAudio(int sound) {
+	if (sound >= 0 && sound < sounds->soundNum) {
+		AudioCommand ac;
+		ac.cmd = 2;
+		ac.data = 1;
+		ac.sound = sound;
+		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+	}
 }
 
 void freeSound(void *snd) {

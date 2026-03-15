@@ -3,6 +3,7 @@
 
 AudioManager *aMan = 0;
 AtomicQueue audioQueue;
+AudioEventScheduler *scheduler = 0;
 bool streaming = false;
 
 #include "Bank.c"
@@ -57,6 +58,7 @@ int initAudio() {
 	aMan->sampleRate = info->sampleRate;
 	aMan->bpm = 120.0;
 	sounds = calloc(1, sizeof(SoundBank));
+	scheduler = calloc(1, sizeof(AudioEventScheduler));
 	return err;
 
 exit:
@@ -89,32 +91,28 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	long long bufferEnd = bufferStart + framesPerBuffer;
 
 	checkAudioCommands();
-	for (int i = 0; i < sounds->soundNum; i++) {
-		Sound *s = &sounds->bank[i];
-		if (s) {
-			if (s->scheduled) {
-				if (s->nextTriggerFrame >= bufferStart) {
-					int mixSpot = 0;
-					while (s->nextTriggerFrame < bufferEnd) {
-						Voice *vo = NULL;//findFreeMixSpot();
-						for (;mixSpot < VOICE_MAX; mixSpot++) {
-							if (aMan->mix[mixSpot].sound == NULL) {
-								vo = &aMan->mix[mixSpot];
-								break;
-							}
-						}
-						if (vo) {
-							vo->sound = s;
-							vo->readFrames = 0;
-							vo->bufferOffset = s->nextTriggerFrame - bufferStart;
-							s->nextTriggerFrame += s->intervalFrames;
-						}
-					}
+	for (int i = 0; i < EVENT_MAX; i++) {
+		AudioEvent *ae = &scheduler->events[i];
+		if (ae->type != 0) {
+			// maybe remove 1st check so we can catch up if neede
+				// currently we will drop it if its too far behind
+			if (ae->nextTriggerFrame >= bufferStart) {
+				if (ae->type == 1) {
+					spawnVoice(ae, bufferStart, bufferEnd);
 				}
 			}
 		}
 	}
-
+	/*
+	for (int i = 0; i < sounds->soundNum; i++) {
+		Sound *s = &sounds->bank[i];
+		if (s) {
+			if (s->scheduled) {
+				spawnVoice(s, bufferStart, bufferEnd);
+			}
+		}
+	}
+	*/
 	// mix of current songs
 	for (int i = 0; i < VOICE_MAX; i++) {
 		Voice *vo = &aMan->mix[i];
@@ -172,10 +170,14 @@ void checkAudioCommands() {
 				if (aMan->mix[i].sound == NULL) {
 					Sound *s = &sounds->bank[ac.sound];
 					if (ac.data != 0) {
-						s->scheduled = true;
+						//s->scheduled = true;
 						s->loop = false;
-						s->intervalFrames = (long long)((ac.data / (aMan->bpm/60.0)) * aMan->sampleRate);
-						s->nextTriggerFrame = 0;//aMan->currentFrame + s->intervalFrames;
+						AudioEvent ae;
+						ae.type = 1;
+						ae.data = ac.sound;
+						ae.intervalFrames = (long long)((ac.data / (aMan->bpm/60.0)) * aMan->sampleRate);
+						ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
+						addAudioEvent(ae);
 					} else {
 						aMan->mix[i].sound = s;
 						aMan->mix[i].readFrames = 0;
@@ -192,6 +194,53 @@ void checkAudioCommands() {
 					}
 				}
 			}
+		} else if (ac.cmd == 2) {
+			removeAudioEvent(ac.data, ac.sound);
+		}
+	}
+}
+
+void addAudioEvent(AudioEvent ae) {
+	int freeSpace = -1;
+	for (int i = 0; i < EVENT_MAX; i++) {
+		if (scheduler->events[i].type == 0) {
+			freeSpace = i;
+			break;
+		}
+	}
+	if (freeSpace >= 0) {
+		scheduler->events[freeSpace] = ae;
+	}
+}
+
+void removeAudioEvent(int type, int data) {
+	for (int i = 0; i < EVENT_MAX; i++) {
+		AudioEvent *ae = &scheduler->events[i];
+		if (ae->type == type && ae->data == data) {
+			ae->type = 0;
+			ae->data = 0;
+		}
+	}
+}
+
+void spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd) {
+	Sound *s = &sounds->bank[ae->data];
+	int mixSpot = 0;
+	while (ae->nextTriggerFrame < bufferEnd) {
+		Voice *vo = NULL;//findFreeMixSpot();
+		for (;mixSpot < VOICE_MAX; mixSpot++) {
+			if (aMan->mix[mixSpot].sound == NULL) {
+				vo = &aMan->mix[mixSpot];
+				break;
+			}
+		}
+		if (vo) {
+			vo->sound = s;
+			vo->readFrames = 0;
+			vo->bufferOffset = ae->nextTriggerFrame - bufferStart;
+			ae->nextTriggerFrame += ae->intervalFrames;
+		} else {
+			break;
 		}
 	}
 }
@@ -248,5 +297,7 @@ void freeAudioManager() {
 		//free(aMan->stream);
 		free(aMan);
 		freeSoundBank();
+		//free events as well
+		free(scheduler);
 	}
 }
