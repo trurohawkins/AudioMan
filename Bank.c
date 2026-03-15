@@ -59,7 +59,7 @@ void playAudio(int sound) {
 void stopAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		AudioCommand ac;
-		ac.cmd = 1;
+		ac.cmd = 2;
 		ac.data = sound;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
 		//printf("stopping audio %s\n", s->file);
@@ -88,11 +88,19 @@ void scheduleAudio(int sound, double frequency) {
 void unScheduleAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		AudioCommand ac;
-		ac.cmd = 2;
+		ac.cmd = 3;
 		ac.data = 1;
 		ac.sound = sound;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
 	}
+}
+
+void scheduleEvent(int event, double frequency) {
+	AudioCommand ac;
+	ac.cmd = 1;
+	ac.sound = event;
+	ac.data = frequency;
+	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
 }
 
 void freeSound(void *snd) {

@@ -39,6 +39,8 @@ typedef struct {
 	int eventNum;
 } AudioEventScheduler;
 
+extern AtomicQueue audioEventQueue;
+
 typedef struct {
 	Sound *sound;
 	long readFrames;
@@ -58,7 +60,8 @@ void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
-void addAudioEvent(AudioEvent se);
+void scheduleEvent(int event, double frequency);
+void addAudioEvent(int type, int data, double frequency);
 void removeAudioEvent(int type, int data);
 void freeSound(void *snd);
 
@@ -96,7 +99,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
                           PaStreamCallbackFlags statusFlags,
                           void *userData);
 void checkAudioCommands();
-void spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
+bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
 Voice *findFreeMixSpot();
 void changeVolume(int group, float vol);
 void changeVolGroup(Sound *s, int group);
