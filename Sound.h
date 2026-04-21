@@ -14,7 +14,8 @@ typedef struct Sound {
 
 	//switch to atomics
 	bool loop;
-	int volume;
+	float volume;
+	int volGroup;
 
 	//only audio thread controls
 	bool active;
@@ -40,6 +41,8 @@ typedef struct {
 } AudioEventScheduler;
 
 extern AtomicQueue audioEventQueue;
+extern void (*audioCommands)(int);
+void setAudioCommands(void (*acFunc)(int));
 
 typedef struct {
 	Sound *sound;
@@ -56,22 +59,26 @@ typedef struct {
 extern SoundBank *sounds;
 
 int processAudioFile(char *file, bool loop);
+void addAudioCommand(int cmd, int obj, double data);
+
 void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
 void scheduleEvent(int event, double frequency);
 void addAudioEvent(int type, int data, double frequency);
+void unscheduleEvent(int event);
+void setVolume(int sound, double volume);
 void removeAudioEvent(int type, int data);
+void parseAudioEvents();
 void freeSound(void *snd);
-
 //Frames PerBuffer
 #define FPB 4096
 #define VOICE_MAX 256
 
 typedef struct {
 	int cmd;
-	int sound;
+	int obj;
 	double data;
 } AudioCommand;
 
@@ -101,7 +108,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 void checkAudioCommands();
 bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
 Voice *findFreeMixSpot();
-void changeVolume(int group, float vol);
+void changeVolumeGroup(int group, float vol);
 void changeVolGroup(Sound *s, int group);
 int addVolGroup();
 void freeAudioManager();

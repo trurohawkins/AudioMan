@@ -11,7 +11,7 @@ int processAudioFile(char *file, bool loop) {
 		}
 	}
 	SNDFILE *infile = 0;
-	SF_INFO sfinfo ;
+	SF_INFO sfinfo = {0};
 	if (!(infile = sf_open(file, SFM_READ, &sfinfo))) {
 		printf ("Not able to open input file %s.\n", file) ;
 		sf_perror (NULL) ;
@@ -26,7 +26,7 @@ int processAudioFile(char *file, bool loop) {
 	s->file[fileLen] = '\0';
 	s->readFrames = 0;
 	s->buff = calloc(size, sizeof(float));
-	s->volume = 0;//aMan->volumes;
+	s->volume = 1;//aMan->volumes;
 	s->loop = loop;
 	sf_read_float(infile, s->buff, size);
 	//s->len = size / (FPB * 2);
@@ -39,68 +39,101 @@ int processAudioFile(char *file, bool loop) {
 
 void playAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		AudioCommand ac;// = calloc(1, sizeof(AudioCommand));
+		AudioCommand ac;
 		ac.cmd = 0;
-		ac.data = sound;
+		ac.obj = sound;
+		ac.data = 0;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
 		if (!streaming) {
 			Pa_StartStream(aMan->stream);
 			streaming = true;
 		}
 	}
-	//addToList(&aMan->mix, s);
-	//aMan->mixCount++;
-	/*
-		 aMan->m->sounds[aMan->m->num] = s;
-		 aMan->m->num++;
-	 */
 }
 
 void stopAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
+		/*
 		AudioCommand ac;
 		ac.cmd = 2;
 		ac.data = sound;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		//printf("stopping audio %s\n", s->file);
-		/*
-		if (removeFromList(&aMan->mix, s)) {
-			//printf("stop successful\n");
-			aMan->mixCount--;
-			if (aMan->mixCount == 0) {
-				Pa_StopStream(aMan->stream);
-			}
-		}
 		*/
+		addAudioCommand(2, sound, 0);
 	}
 }
 
 void scheduleAudio(int sound, double frequency) {
 	if (sound >= 0 && sound < sounds->soundNum) {
+		/*
 		AudioCommand ac;
 		ac.cmd = 0;
 		ac.sound = sound;
 		ac.data = frequency;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		*/
+		addAudioCommand(0, sound, frequency);
 	}
 }
 
 void unScheduleAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
+		/*
 		AudioCommand ac;
 		ac.cmd = 3;
 		ac.data = 1;
 		ac.sound = sound;
 		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		*/
+		// 1 indicates sound rather than event
+		addAudioCommand(3, sound, 1);
 	}
 }
 
 void scheduleEvent(int event, double frequency) {
+	/*
 	AudioCommand ac;
 	ac.cmd = 1;
 	ac.sound = event;
 	ac.data = frequency;
 	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+	*/
+	addAudioCommand(1, event, frequency);
+}
+
+void unscheduleEvent(int event) {
+	/*
+	AudioCommand ac;
+	ac.cmd = 3;
+	ac.data = 2;
+	ac.sound = event;
+	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+	*/
+	// 2 indicates event rather than sound
+	addAudioCommand(3, event, 2);
+}
+
+void setVolume(int sound, double volume) {
+	addAudioCommand(4, sound, volume);
+}
+
+void addAudioCommand(int cmd, int obj, double data) {
+	AudioCommand ac;
+	ac.cmd = cmd;
+	ac.obj = obj;
+	ac.data = data;
+	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+}
+
+void setAudioCommands(void (*acFunc)(int)) {
+	audioCommands = acFunc;
+}
+
+void parseAudioEvents() {
+	int command;
+	while (aqPop(&audioEventQueue, &command, sizeof(int))) {
+		audioCommands(command);
+	}
 }
 
 void freeSound(void *snd) {
