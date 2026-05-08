@@ -26,4 +26,5 @@ fclean:
 	rm audioTest
 	rm *.o
 	rm AudioMan.h
+	rm libHelper.a
 	rm libAudioMan.a
