@@ -2,8 +2,10 @@
 #include "Sound.h"
 
 AudioManager *aMan = 0;
-AtomicQueue audioQueue;
-AtomicQueue audioEventQueue;
+DECLARE_SPSC(AudioCommand, AudioCommandQueue, 256)
+
+AudioCommandQueue audioQueue;
+IntQueue audioEventQueue;
 AudioEventScheduler *scheduler = 0;
 void (*audioCommands)(int);
 
@@ -107,7 +109,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 						}
 					} else {
 						// push to signal to main thread to execute event
-						aqPush(&audioEventQueue, &ae->data, sizeof(int)); 
+						IntQueue_aqPush(&audioEventQueue, ae->data); 
 					}
 					// set the next trigger event time
 					ae->nextTriggerFrame += ae->intervalFrames;
@@ -160,7 +162,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 
 void checkAudioCommands() {
 	AudioCommand ac;
-	while (aqPop(&audioQueue, &ac, sizeof(AudioCommand))) {
+	while (AudioCommandQueue_aqPop(&audioQueue, &ac)) {
 		//play audio command
 		if (ac.cmd == 0) {
 			for (int i = 0; i < VOICE_MAX; i++) {

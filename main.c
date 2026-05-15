@@ -30,7 +30,7 @@ int main() {
 	scheduleEvent(0, frequency);
 	double f2 = 3.0;
 	scheduleEvent(1, f2);
-	//scheduleEvent(2, 6.0);
+	scheduleEvent(2, 6.0);
 	while (true) {
 		parseAudioEvents();
 	}

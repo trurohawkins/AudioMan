@@ -43,7 +43,7 @@ void playAudio(int sound) {
 		ac.cmd = 0;
 		ac.obj = sound;
 		ac.data = 0;
-		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		AudioCommandQueue_aqPush(&audioQueue, ac);
 		if (!streaming) {
 			Pa_StartStream(aMan->stream);
 			streaming = true;
@@ -122,7 +122,7 @@ void addAudioCommand(int cmd, int obj, double data) {
 	ac.cmd = cmd;
 	ac.obj = obj;
 	ac.data = data;
-	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+	AudioCommandQueue_aqPush(&audioQueue, ac);
 }
 
 void setAudioCommands(void (*acFunc)(int)) {
@@ -131,7 +131,7 @@ void setAudioCommands(void (*acFunc)(int)) {
 
 void parseAudioEvents() {
 	int command;
-	while (aqPop(&audioEventQueue, &command, sizeof(int))) {
+	while (IntQueue_aqPop(&audioEventQueue, &command)) {
 		audioCommands(command);
 	}
 }

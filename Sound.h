@@ -40,8 +40,6 @@ typedef struct {
 	int eventNum;
 } AudioEventScheduler;
 
-extern AtomicQueue audioEventQueue;
-extern void (*audioCommands)(int);
 void setAudioCommands(void (*acFunc)(int));
 
 typedef struct {
@@ -56,7 +54,6 @@ typedef struct {
 	int soundNum;
 } SoundBank;
 
-extern SoundBank *sounds;
 
 int processAudioFile(char *file, bool loop);
 void addAudioCommand(int cmd, int obj, double data);

@@ -134,6 +134,48 @@ int *readBinaryInt(FILE *fptr, int num);
 #include <stddef.h>
 #include <string.h>
 
+//CAPACITY needs to be a power of 2
+
+#define DECLARE_SPSC_QUEUE(TYPE, NAME, CAPACITY)\
+	typedef struct {\
+		TYPE buffer[CAPACITY];\
+		atomic_uint writeIndex;\
+		atomic_uint readIndex;\
+	} NAME;\
+
+#define DEFINE_SPSC_PUSH(TYPE, NAME, CAPACITY)\
+	static inline bool NAME##_aqPush(NAME *q, TYPE value) {\
+		unsigned w = atomic_load_explicit(&q->writeIndex, memory_order_relaxed);\
+		unsigned r = atomic_load_explicit(&q->readIndex, memory_order_acquire);\
+		unsigned next = (w + 1) & (CAPACITY - 1);\
+		if (next == r) {\
+			return false; /*full*/\
+		}\
+		q->buffer[w] = value;\
+		atomic_store_explicit(&q->writeIndex, next, memory_order_release);\
+		return true;\
+	}\
+
+#define DEFINE_SPSC_POP(TYPE, NAME, CAPACITY)\
+	static inline bool NAME##_aqPop(NAME *q, TYPE *out) {\
+		unsigned r = atomic_load_explicit(&q->readIndex, memory_order_relaxed);\
+		unsigned w = atomic_load_explicit(&q->writeIndex, memory_order_acquire);\
+		if (r == w) {\
+			return false;\
+		}\
+		*out = q->buffer[r];\
+		unsigned next = (r + 1) & (CAPACITY -1);\
+		atomic_store_explicit(&q->readIndex, next, memory_order_release);\
+		return true;\
+	}\
+
+#define DECLARE_SPSC(TYPE, NAME, CAPACITY)\
+	DECLARE_SPSC_QUEUE(TYPE, NAME, CAPACITY)\
+	DEFINE_SPSC_PUSH(TYPE, NAME, CAPACITY)\
+	DEFINE_SPSC_POP(TYPE, NAME, CAPACITY)
+
+DECLARE_SPSC(int, IntQueue, 256)
+
 #define QUEUE_CAPACITY 256
 #define SLOT_SIZE 64
 
