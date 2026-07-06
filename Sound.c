@@ -7,7 +7,6 @@ DECLARE_SPSC(AudioCommand, AudioCommandQueue, 256)
 AudioCommandQueue audioQueue;
 IntQueue audioEventQueue;
 AudioEventScheduler *scheduler = 0;
-void (*audioCommands)(int);
 
 bool streaming = false;
 

@@ -1,3 +1,4 @@
+void (*eventManifest[AUDIO_EVENT_MAX])(void);
 SoundBank *sounds = 0;
 
 int processAudioFile(char *file, bool loop) {
@@ -90,27 +91,25 @@ void unScheduleAudio(int sound) {
 	}
 }
 
-void scheduleEvent(int event, double frequency) {
-	/*
-	AudioCommand ac;
-	ac.cmd = 1;
-	ac.sound = event;
-	ac.data = frequency;
-	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-	*/
-	addAudioCommand(1, event, frequency);
+bool scheduleEvent(int event, void (*func)(void), double frequency) {
+	if (event >= 0 && event < AUDIO_EVENT_MAX) {
+		if (eventManifest[event] == 0){ 
+			eventManifest[event] = func;
+			addAudioCommand(1, event, frequency);
+			return true;
+		} else {
+			printf("we already have an event\n");
+		}
+	}
+	return false;
 }
 
 void unscheduleEvent(int event) {
-	/*
-	AudioCommand ac;
-	ac.cmd = 3;
-	ac.data = 2;
-	ac.sound = event;
-	aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-	*/
-	// 2 indicates event rather than sound
-	addAudioCommand(3, event, 2);
+	if (event >= 0 && event < AUDIO_EVENT_MAX) {
+		// 2 indicates event rather than sound
+		addAudioCommand(3, event, 2);
+		eventManifest[event] = 0;
+	}
 }
 
 void setVolume(int sound, double volume) {
@@ -125,14 +124,12 @@ void addAudioCommand(int cmd, int obj, double data) {
 	AudioCommandQueue_aqPush(&audioQueue, ac);
 }
 
-void setAudioCommands(void (*acFunc)(int)) {
-	audioCommands = acFunc;
-}
-
 void parseAudioEvents() {
 	int command;
 	while (IntQueue_aqPop(&audioEventQueue, &command)) {
-		audioCommands(command);
+		if (eventManifest[command] != 0) {
+			eventManifest[command]();
+		}
 	}
 }
 

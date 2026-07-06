@@ -40,7 +40,8 @@ typedef struct {
 	int eventNum;
 } AudioEventScheduler;
 
-void setAudioCommands(void (*acFunc)(int));
+#define AUDIO_EVENT_MAX 256
+
 
 typedef struct {
 	Sound *sound;
@@ -62,7 +63,7 @@ void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
-void scheduleEvent(int event, double frequency);
+bool scheduleEvent(int event, void (*func)(void), double frequency);
 void addAudioEvent(int type, int data, double frequency);
 void unscheduleEvent(int event);
 void setVolume(int sound, double volume);
