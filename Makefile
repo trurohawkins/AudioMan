@@ -34,6 +34,9 @@ AudioMan.h: Sound.o helper.h
 	@echo "Generating portable sound headers"
 	@cat helper.h Sound.h  >> AudioMan.h
 
+main.o: main.c
+	gcc $(CFLAGS) -c main.c -o $@
+
 Sound.o: Sound.c Sound.h Bank.c helper.h
 	gcc $(CFLAGS) -c Sound.c -lportaudio -lsndfile
 

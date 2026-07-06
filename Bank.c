@@ -1,4 +1,4 @@
-void (*eventManifest[AUDIO_EVENT_MAX])(void);
+AudioEventData eventManifest[AUDIO_EVENT_MAX];
 SoundBank *sounds = 0;
 
 int processAudioFile(char *file, bool loop) {
@@ -91,10 +91,11 @@ void unScheduleAudio(int sound) {
 	}
 }
 
-bool scheduleEvent(int event, void (*func)(void), double frequency) {
+bool scheduleEvent(int event, void (*func)(void*), void *data, double frequency) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		if (eventManifest[event] == 0){ 
-			eventManifest[event] = func;
+		if (eventManifest[event].func == 0){ 
+			eventManifest[event].func = func;
+			eventManifest[event].data = data;
 			addAudioCommand(1, event, frequency);
 			return true;
 		} else {
@@ -108,7 +109,8 @@ void unscheduleEvent(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
 		// 2 indicates event rather than sound
 		addAudioCommand(3, event, 2);
-		eventManifest[event] = 0;
+		eventManifest[event].func = 0;
+		eventManifest[event].data = 0;
 	}
 }
 
@@ -127,8 +129,9 @@ void addAudioCommand(int cmd, int obj, double data) {
 void parseAudioEvents() {
 	int command;
 	while (IntQueue_aqPop(&audioEventQueue, &command)) {
-		if (eventManifest[command] != 0) {
-			eventManifest[command]();
+		if (eventManifest[command].func != 0) {
+			void *data = eventManifest[command].data;
+			eventManifest[command].func(data);
 		}
 	}
 }
