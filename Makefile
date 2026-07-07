@@ -1,5 +1,12 @@
 TARGET = audioTest
 
+LIBDIR = lib/
+INCDIR = include/
+
+HELPERDIR = ../HelperFuncs/
+HELPERINC = $(HELPERDIR)include/
+HELPERLIB = $(HELPERDIR)lib/
+
 DEV_CFLAGS = -g -fsanitize=address,undefined -fno-omit-frame-pointer
 DEV_LDFLAGS = -fsanitize=address,undefined
 
@@ -9,7 +16,7 @@ TSAN_LDFLAGS = -fsanitize=thread
 PROD_CFLAGS = -O2
 PROD_LDFLAGS =
 
-CFLAGS = -MMD -MP
+CFLAGS = -MMD -MP -I$(HELPERINC) -I$(INCDIR)
 LDFLAGS =
 
 dev: CFLAGS += $(DEV_CFLAGS)
@@ -24,35 +31,29 @@ prod: CFLAGS += $(PROD_CFLAGS)
 prod: LDFLAGS += $(PROD_LDFLAGS)
 prod: $(TARGET)
 
-$(TARGET): AudioMan.h  libAudioMan.a  libHelper.a main.o 
-	gcc main.o -o $@ $(LDFLAGS) libAudioMan.a libHelper.a -lportaudio -lsndfile -lm
+$(TARGET): $(INCDIR)AudioMan.h  $(LIBDIR)libAudioMan.a  $(HELPERLIB)libHelper.a  $(HELPERINC)helper.h main.o 
+	gcc main.o -o $@ $(LDFLAGS) $(LIBDIR)libAudioMan.a -L$(HELPERLIB) -lHelper -lportaudio -lsndfile -lm
 
-libAudioMan.a: Sound.o AudioMan.h
-	ar rs libAudioMan.a Sound.o
+$(HELPERLIB)libHelper.a:
+	$(MAKE) -C $(HELPERDIR)
 
-AudioMan.h: Sound.o helper.h
-	@echo "Generating portable sound headers"
-	@cat helper.h Sound.h  >> AudioMan.h
+$(LIBDIR)libAudioMan.a: Sound.o | $(LIBDIR)
+	ar rs $@ Sound.o
 
 main.o: main.c
 	gcc $(CFLAGS) -c main.c -o $@
 
-Sound.o: Sound.c Sound.h Bank.c helper.h
+Sound.o: Sound.c $(INCDIR)Sound.h Bank.c
 	gcc $(CFLAGS) -c Sound.c -lportaudio -lsndfile
 
-libHelper.a:
-	$(MAKE) -C ../FormNetwork/
-	cp ../FormNetwork/libHelper.a .
-
-helper.h:
-	$(MAKE) -C ../FormNetwork/
-	cp ../FormNetwork/helper.h .
+$(LIBDIR):
+	mkdir -p $(LIBDIR)
 
 clean:
-	rm -f *.o *.a *.d
+	rm -f *.o *.d
 
 fclean:
-	rm -f *.o *.a *.d helper.h audioTest AudioMan.h
+	rm -f *.o *.d $(TARGET) $(LIBDIR)libAudioMan.a
 
 # merges .d files into dependency graph
 -include *.d
