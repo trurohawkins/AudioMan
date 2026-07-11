@@ -4,77 +4,78 @@
 AudioManager *aMan = 0;
 DECLARE_SPSC(AudioCommand, AudioCommandQueue, 256)
 
-	AudioCommandQueue audioQueue;
-	IntQueue audioEventQueue;
-	AudioEventScheduler *scheduler = 0;
-
-	bool streaming = false;
+AudioCommandQueue audioQueue;
+IntQueue audioEventQueue;
+AudioEventScheduler *scheduler = 0;
 
 #include "Bank.c"
 
 
-	int initAudio() {
-		aMan = calloc(1, sizeof(AudioManager));
-		//aMan->sounds = makeList();
-		aMan->volumes = calloc(1, sizeof(float));
-		aMan->volumes[0] = 1;
-		aMan->vGroups = 1;
+int initAudio() {
+	aMan = calloc(1, sizeof(AudioManager));
+	//aMan->sounds = makeList();
+	aMan->volumes = calloc(1, sizeof(float));
+	aMan->volumes[0] = 1;
+	aMan->vGroups = 1;
 
-		PaStreamParameters outputParameters;
-		PaError err = Pa_Initialize();
-		if (err != paNoError) {
-			goto exit;
-		}
-		outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+	PaStreamParameters outputParameters;
+	PaError err = Pa_Initialize();
+	if (err != paNoError) {
+		goto exit;
+	}
+	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
 
-		if (outputParameters.device == paNoDevice) {
-			fprintf(stderr, "Error: No default output device.\n");
-			goto exit;
-		}
+	if (outputParameters.device == paNoDevice) {
+		fprintf(stderr, "Error: No default output device.\n");
+		goto exit;
+	}
 
-		outputParameters.channelCount = 2;       /* stereo output */
-		outputParameters.sampleFormat = paFloat32; /* 32 bit floating point output */
-		outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-		outputParameters.hostApiSpecificStreamInfo = NULL;
-		double sampleRate = 44100.0;
+	outputParameters.channelCount = 2;       /* stereo output */
+	outputParameters.sampleFormat = paFloat32; /* 32 bit floating point output */
+	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+	outputParameters.hostApiSpecificStreamInfo = NULL;
+	double sampleRate = 44100.0;
+	
+	sounds = calloc(1, sizeof(SoundBank));
+	scheduler = calloc(1, sizeof(AudioEventScheduler));
 
-		err = Pa_OpenStream(
-				&aMan->stream,
-				NULL, /* no input */
-				&outputParameters,
-				sampleRate,
-				FPB,
-				paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-				paLibsndfileCb,
-				aMan);
+	err = Pa_OpenStream(
+			&aMan->stream,
+			NULL, /* no input */
+			&outputParameters,
+			sampleRate,
+			FPB,
+			paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+			paLibsndfileCb,
+			aMan);
 
-		if(err != paNoError) {
-			printf("open stream error  ");
-			aMan->stream = 0;//do i need?
-			goto exit;
-		}
+	if(err != paNoError) {
+		printf("open stream error  ");
+		aMan->stream = 0;//do i need?
+		goto exit;
+	}
 
-		err = Pa_StartStream(aMan->stream);
-		if (err != paNoError) {
-			goto exit;
-		}
-		const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
-		aMan->sampleRate = info->sampleRate;
-		aMan->bpm = 120.0;
-		sounds = calloc(1, sizeof(SoundBank));
-		scheduler = calloc(1, sizeof(AudioEventScheduler));
-		return err;
+	err = Pa_StartStream(aMan->stream);
+	if (err != paNoError) {
+		printf("Start stream failed: %s\n", Pa_GetErrorText(err));
+		goto exit;
+	}
+	const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
+	aMan->sampleRate = info->sampleRate;
+	aMan->bpm = 120.0;
+	return err;
 
 exit:
-		if (err != paNoError) { 
-			printf("PortAudio error: %s\n", Pa_GetErrorText(err));
-		}
-		if (aMan != 0) {
-			freeAudioManager();
-		}
-		Pa_Terminate();
-
+	if (err != paNoError) { 
+		printf("PortAudio error: %s\n", Pa_GetErrorText(err));
 	}
+	if (aMan != 0) {
+		freeAudioManager();
+	}
+	Pa_Terminate();
+	return err;
+
+}
 
 Voice getVoice(Sound *s) {
 	Voice v;
@@ -91,7 +92,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	float *out = (float*)outputBuffer;
 	memset(out, 0, framesPerBuffer * 2 * sizeof(float));
 	AudioManager *a = userData;
-	long long bufferStart = aMan->currentFrame;
+	long long bufferStart = a->currentFrame;
 	long long bufferEnd = bufferStart + framesPerBuffer;
 
 	checkAudioCommands();
@@ -118,7 +119,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	}
 	// mix of current songs
 	for (int i = 0; i < VOICE_MAX; i++) {
-		Voice *vo = &aMan->mix[i];
+		Voice *vo = &a->mix[i];
 		Sound *s = vo->sound;
 		if (!s) {
 			continue;
@@ -154,7 +155,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 		}
 	}
 
-	aMan->currentFrame += framesPerBuffer;
+	a->currentFrame += framesPerBuffer;
 
 	return paContinue;
 }
@@ -197,25 +198,33 @@ void checkAudioCommands() {
 	}
 }
 
-void addAudioEvent(int type, int data, double frequency) {
+bool addAudioEvent(int type, int data, double frequency) {
+	if (scheduler->eventNum >= EVENT_MAX) {
+		// we need to check if there are EVENT_MAX events happening, 
+		//if not we want to reorder them downwards and adjust scheduler->eventNum
+		// if there are, we return false
+	}
 	int freeSpace = -1;
-	for (int i = 0; i <= scheduler->eventNum; i++) {
-		if (scheduler->events[i].type == 0) {
-			freeSpace = i;
+	for (int i = 0; i < EVENT_MAX; i++) {
+		int event = (scheduler->eventNum + i) % EVENT_MAX;
+		if (scheduler->events[event].type == 0) {
+			freeSpace = event;
 			break;
 		}
 	}
 	if (freeSpace >= 0) {
-		if (freeSpace >= scheduler->eventNum) {
-			scheduler->eventNum++;
-		}
 		AudioEvent ae;
 		ae.type = type;
 		ae.data = data;
 		ae.intervalFrames = (long long)((frequency / (aMan->bpm/60.0)) * aMan->sampleRate);
 		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
 		scheduler->events[freeSpace] = ae;
+		if (scheduler->eventNum < EVENT_MAX-1) {
+			scheduler->eventNum++;
+		}
+		return true;
 	}
+	return false;
 }
 
 void removeAudioEvent(int type, int data) {
@@ -257,6 +266,7 @@ Voice *findFreeMixSpot() {
 			return &aMan->mix[i];
 		}
 	}
+	return NULL;
 }
 
 
@@ -288,8 +298,12 @@ void changeVolGroup(Sound *s, int group) {
 
 void endAudio() {
 	if (aMan && aMan->stream) {
-		Pa_StopStream(aMan->stream);
+		PaError err = Pa_StopStream(aMan->stream);
+		if (err != paNoError) {
+			printf("%s\n", Pa_GetErrorText(err));
+		}
 		Pa_CloseStream(aMan->stream);
+		aMan->stream = NULL;
 	}
 	freeAudioManager();
 	Pa_Terminate();
@@ -297,13 +311,17 @@ void endAudio() {
 
 void freeAudioManager() {
 	if (aMan) {
-		free(aMan->volumes);
-		//freeListSaveObj(&aMan->mix);
-		//deleteList(&aMan->sounds, freeSound);
-		//free(aMan->stream);
-		free(aMan);
 		freeSoundBank();
 		//free events as well
 		free(scheduler);
+		scheduler = NULL;
+		free(aMan->volumes);
+		aMan->volumes = NULL;
+		free(aMan);
+		aMan = NULL;
 	}
+}
+
+const char *__lsan_default_options(void) {
+	return "suppressions=lsan.supp";
 }

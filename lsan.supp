@@ -1,0 +1,4 @@
+leak:snd_dlopen
+leak:snd_pcm_open
+leak:PaAlsa_Initialize
+leak:Pa_Initialize

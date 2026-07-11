@@ -67,7 +67,7 @@ void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
 bool scheduleEvent(int event, void (*func)(void*), void *data, double frequency);
-void addAudioEvent(int type, int data, double frequency);
+bool addAudioEvent(int type, int data, double frequency);
 void unscheduleEvent(int event);
 void setVolume(int sound, double volume);
 void removeAudioEvent(int type, int data);

@@ -45,10 +45,6 @@ void playAudio(int sound) {
 		ac.obj = sound;
 		ac.data = 0;
 		AudioCommandQueue_aqPush(&audioQueue, ac);
-		if (!streaming) {
-			Pa_StartStream(aMan->stream);
-			streaming = true;
-		}
 	}
 }
 
@@ -144,11 +140,14 @@ void freeSound(void *snd) {
 }
 
 void freeSoundBank() {
+	if (!sounds) {
+		return;
+	}
 	for (int i = 0; i < sounds->soundNum; i++) {
-		Sound s = sounds->bank[i];
-		free(s.file);
-		free(s.buff);
+		free(sounds->bank[i].file);
+		free(sounds->bank[i].buff);
 	}
 	free(sounds);
+	sounds = NULL;
 }
 

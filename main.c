@@ -1,6 +1,8 @@
 #include "AudioMan.h"
+#include <signal.h>
 
 bool poo = false;
+volatile bool running  = true;
 float volume = 1.0;
 
 void lowerVolume(void *sound) {
@@ -11,12 +13,17 @@ void lowerVolume(void *sound) {
 	setVolume(*s1, volume);
 }
 
+void handler (int sig) {
+	running = false;
+}
+
 void specialSound(void *sound) {
 	int *s0 = sound;
 	playAudio(*s0);
 }
 
 int main() {
+	signal(SIGINT, handler);
 	initAudio();
 
 	int sound0 = processAudioFile("sounds/a1.wav", false);
@@ -28,7 +35,10 @@ int main() {
 	double f2 = 3.0;
 	scheduleEvent(1, lowerVolume, &sound1, f2);
 	scheduleEvent(2, specialSound, &sound0, 6.0);
-	while (true) {
+	while (running) {
 		parseAudioEvents();
 	}
+	endAudio();
+	printf("ended program\n");
+	return 0;
 }

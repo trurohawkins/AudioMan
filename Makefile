@@ -44,7 +44,7 @@ main.o: main.c
 	gcc $(CFLAGS) -c main.c -o $@
 
 Sound.o: Sound.c $(INCDIR)Sound.h Bank.c
-	gcc $(CFLAGS) -c Sound.c -lportaudio -lsndfile
+	gcc $(CFLAGS) -c Sound.c 
 
 $(LIBDIR):
 	mkdir -p $(LIBDIR)
