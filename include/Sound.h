@@ -72,6 +72,7 @@ void unscheduleEvent(int event);
 void setVolume(int sound, double volume);
 void removeAudioEvent(int type, int data);
 void parseAudioEvents();
+void flushAudioEvents();
 void freeSound(void *snd);
 //Frames PerBuffer
 #define FPB 4096

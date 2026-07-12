@@ -132,6 +132,11 @@ void parseAudioEvents() {
 	}
 }
 
+void flushAudioEvents() {
+	int toilet;
+	while (IntQueue_aqPop(&audioEventQueue, &toilet)) {}
+}
+
 void freeSound(void *snd) {
 	Sound *s = snd;
 	free(s->file);
