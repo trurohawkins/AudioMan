@@ -7,14 +7,14 @@ int processAudioFile(char *file, bool loop) {
 	for (int i = 0; i < sounds->soundNum; i++) {
 		Sound s = sounds->bank[i];
 		if (memcmp(s.file, file, fileLen) == 0) {
-			printf("already have the sound\n");
+			//printf("already have the sound\n");
 			return i;
 		}
 	}
 	SNDFILE *infile = 0;
 	SF_INFO sfinfo = {0};
 	if (!(infile = sf_open(file, SFM_READ, &sfinfo))) {
-		printf ("Not able to open input file %s.\n", file) ;
+		//printf ("Not able to open input file %s.\n", file) ;
 		sf_perror (NULL) ;
 		return  0 ;
 	}
@@ -95,7 +95,7 @@ bool scheduleEvent(int event, void (*func)(void*), void *data, double frequency)
 			addAudioCommand(1, event, frequency);
 			return true;
 		} else {
-			printf("we already have an event\n");
+			//printf("we already have an event\n");
 		}
 	}
 	return false;

@@ -26,7 +26,7 @@ int initAudio() {
 	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
 
 	if (outputParameters.device == paNoDevice) {
-		fprintf(stderr, "Error: No default output device.\n");
+		//fprintf(stderr, "Error: No default output device.\n");
 		goto exit;
 	}
 
@@ -50,14 +50,14 @@ int initAudio() {
 			aMan);
 
 	if(err != paNoError) {
-		printf("open stream error  ");
+		//printf("open stream error  ");
 		aMan->stream = 0;//do i need?
 		goto exit;
 	}
 
 	err = Pa_StartStream(aMan->stream);
 	if (err != paNoError) {
-		printf("Start stream failed: %s\n", Pa_GetErrorText(err));
+		//printf("Start stream failed: %s\n", Pa_GetErrorText(err));
 		goto exit;
 	}
 	const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
@@ -67,7 +67,7 @@ int initAudio() {
 
 exit:
 	if (err != paNoError) { 
-		printf("PortAudio error: %s\n", Pa_GetErrorText(err));
+		//printf("PortAudio error: %s\n", Pa_GetErrorText(err));
 	}
 	if (aMan != 0) {
 		freeAudioManager();
@@ -300,7 +300,7 @@ void endAudio() {
 	if (aMan && aMan->stream) {
 		PaError err = Pa_StopStream(aMan->stream);
 		if (err != paNoError) {
-			printf("%s\n", Pa_GetErrorText(err));
+			//printf("%s\n", Pa_GetErrorText(err));
 		}
 		Pa_CloseStream(aMan->stream);
 		aMan->stream = NULL;
