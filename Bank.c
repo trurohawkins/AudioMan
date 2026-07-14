@@ -87,18 +87,20 @@ void unScheduleAudio(int sound) {
 	}
 }
 
-bool scheduleEvent(int event, void (*func)(void*), void *data, double frequency) {
-	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		if (eventManifest[event].func == 0){ 
-			eventManifest[event].func = func;
-			eventManifest[event].data = data;
-			addAudioCommand(1, event, frequency);
-			return true;
-		} else {
-			//printf("we already have an event\n");
+int scheduleEvent(void (*func)(void*), void *data, double frequency) {
+	int event = -1;
+	for (int i = 0; i < AUDIO_EVENT_MAX; i++) {
+		if (eventManifest[i].func == 0) {
+			event = i;
+			break;
 		}
 	}
-	return false;
+	if (event != -1) {
+		eventManifest[event].func = func;
+		eventManifest[event].data = data;
+		addAudioCommand(1, event, frequency);
+	}
+	return event;
 }
 
 void unscheduleEvent(int event) {
@@ -110,8 +112,20 @@ void unscheduleEvent(int event) {
 	}
 }
 
+void pauseAudioEvent(int event) {
+	if (event >= 0 && event < AUDIO_EVENT_MAX) {
+		addAudioCommand(4, event, 2);
+	}
+}
+
+void unpauseAudioEvent(int event) {
+	if (event >= 0 && event < AUDIO_EVENT_MAX) {
+		addAudioCommand(5, event, 2);
+	}
+}
+
 void setVolume(int sound, double volume) {
-	addAudioCommand(4, sound, volume);
+	addAudioCommand(6, sound, volume);
 }
 
 void addAudioCommand(int cmd, int obj, double data) {

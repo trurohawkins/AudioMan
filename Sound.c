@@ -103,13 +103,15 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 			// currently we will drop it if its too far behind
 			if (ae->nextTriggerFrame >= bufferStart) {
 				while (ae->nextTriggerFrame < bufferEnd) {
-					if (ae->type == 1) {
-						if (!spawnVoice(ae, bufferStart, bufferEnd)) {
-							break;
+					if (!ae->paused) {
+						if (ae->type == 1) {
+							if (!spawnVoice(ae, bufferStart, bufferEnd)) {
+								break;
+							}
+						} else {
+							// push to signal to main thread to execute event
+							IntQueue_aqPush(&audioEventQueue, ae->data); 
 						}
-					} else {
-						// push to signal to main thread to execute event
-						IntQueue_aqPush(&audioEventQueue, ae->data); 
 					}
 					// set the next trigger event time
 					ae->nextTriggerFrame += ae->intervalFrames;
@@ -192,6 +194,10 @@ void checkAudioCommands() {
 		} else if (ac.cmd == 3) {
 			removeAudioEvent(ac.data, ac.obj);
 		} else if (ac.cmd == 4) {
+			setPauseOnEvent(ac.data, ac.obj, true);
+		} else if (ac.cmd == 5) {
+			setPauseOnEvent(ac.data, ac.obj, false);
+		} else if (ac.cmd == 6) {
 			Sound *s = &sounds->bank[ac.obj];
 			s->volume = ac.data;
 		}
@@ -216,6 +222,7 @@ bool addAudioEvent(int type, int data, double frequency) {
 		AudioEvent ae;
 		ae.type = type;
 		ae.data = data;
+		ae.paused = false;
 		ae.intervalFrames = (long long)((frequency / (aMan->bpm/60.0)) * aMan->sampleRate);
 		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
 		scheduler->events[freeSpace] = ae;
@@ -236,6 +243,15 @@ void removeAudioEvent(int type, int data) {
 			if (i >= scheduler->eventNum - 1) {
 				scheduler->eventNum--;
 			}
+		}
+	}
+}
+
+void setPauseOnEvent(int type, int data, bool state) {
+	for (int i = 0; i < scheduler->eventNum; i++) {
+		AudioEvent *ae = &scheduler->events[i];
+		if (ae->type == type && ae->data == data) {
+			ae->paused = state;
 		}
 	}
 }

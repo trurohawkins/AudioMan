@@ -31,7 +31,7 @@ typedef struct {
 	int data;
 
 	long long nextTriggerFrame;
-	bool scheduled;
+	bool paused;
 	long long intervalFrames;
 } AudioEvent;
 
@@ -66,11 +66,16 @@ void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
-bool scheduleEvent(int event, void (*func)(void*), void *data, double frequency);
+int scheduleEvent(void (*func)(void*), void *data, double frequency);
 bool addAudioEvent(int type, int data, double frequency);
 void unscheduleEvent(int event);
+void pauseAudioEvent(int event);
+void unpauseAudioEvent(int event);
+void setPauseOnEvent(int type, int data, bool state);
+
 void setVolume(int sound, double volume);
 void removeAudioEvent(int type, int data);
+
 void parseAudioEvents();
 void flushAudioEvents();
 void freeSound(void *snd);
