@@ -1,0 +1,6 @@
+*.o
+*.d
+lib/
+lsan.supp
+
+audioTest
