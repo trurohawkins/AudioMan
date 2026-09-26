@@ -5,6 +5,7 @@ bool poo = false;
 volatile bool running  = true;
 float volume = 1.0;
 int volEvent = -1;
+uint64_t lastTime = 0;
 
 void lowerVolume(void *sound) {
 	int *s1 = sound;
@@ -20,7 +21,16 @@ void handler (int sig) {
 	running = false;
 }
 
+uint64_t elapsed[100];
+int count = 0;
+
 void specialSound(void *sound) {
+	uint64_t now = nowUS();
+	//printf("elapsed %" PRIu64 "\n", now - lastTime);
+	elapsed[count] = now - lastTime;
+	count++;
+	lastTime = now;
+	/*
 	int *s0 = sound;
 	playAudio(*s0);
 	if (!poo) {
@@ -30,6 +40,7 @@ void specialSound(void *sound) {
 		unpauseAudioEvent(volEvent);
 		poo = false;
 	}
+	*/
 }
 
 
@@ -37,18 +48,23 @@ int main() {
 	signal(SIGINT, handler);
 	initAudio();
 
-	int sound0 = processAudioFile("sounds/a1.wav", false);
+	//int sound0 = processAudioFile("sounds/a1.wav", false);
 	//playAudio(sound0);
-	int sound1 = processAudioFile("sounds/a2.wav", false);
+	//int sound1 = processAudioFile("sounds/a2.wav", false);
 
 	double frequency = 1.0;
-	scheduleAudio(sound1, frequency);
+	//scheduleAudio(sound1, frequency);
 	double f2 = 2.0;
-	volEvent = scheduleEvent(lowerVolume, &sound1, f2);
-	scheduleEvent(specialSound, &sound0, 10.0);
+	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
+	scheduleEvent(specialSound, 0, 1.0);
+	lastTime = nowUS();
 	while (running) {
 		parseAudioEvents();
 	}
 	endAudio();
+	for (int i = 0; i < count; i++) {
+		printf("elapsed %" PRIu64 "\n", elapsed[i]);
+
+	}
 	return 0;
 }

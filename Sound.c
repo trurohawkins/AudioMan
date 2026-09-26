@@ -5,7 +5,8 @@ AudioManager *aMan = 0;
 DECLARE_SPSC(AudioCommand, AudioCommandQueue, 256)
 
 AudioCommandQueue audioQueue;
-IntQueue audioEventQueue;
+DECLARE_SPSC(AudioEventMessage, AudioEventMessageQueue, 256)
+AudioEventMessageQueue audioEventQueue;
 AudioEventScheduler *scheduler = 0;
 
 #include "Bank.c"
@@ -103,14 +104,24 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 			// currently we will drop it if its too far behind
 			if (ae->nextTriggerFrame >= bufferStart) {
 				while (ae->nextTriggerFrame < bufferEnd) {
+
+					long long triggerFrame = ae->nextTriggerFrame;
+					//how far into audio buffer did the event occur?
+					long long offset = triggerFrame - bufferStart;
+					//printf("Audio event: frame=%lld offset=%lld\n", triggerFrame, offset);
+
 					if (!ae->paused) {
 						if (ae->type == 1) {
 							if (!spawnVoice(ae, bufferStart, bufferEnd)) {
 								break;
 							}
 						} else {
+							AudioEventMessage aem = {
+								.data = ae->data,
+								.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
+							};
 							// push to signal to main thread to execute event
-							IntQueue_aqPush(&audioEventQueue, ae->data); 
+							AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
 						}
 					}
 					// set the next trigger event time
@@ -127,26 +138,39 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 			continue;
 		}
 		// mixing
+		long startFrame = vo->bufferOffset;
+		long framesAvailable = framesPerBuffer - startFrame;
+
 		long remaining = s->totalFrames - vo->readFrames;
 		if (remaining <= 0) {
-			if (!vo->sound->loop) {
+			if (!s->loop) {
 				vo->sound = NULL;
 				continue;
 			} else {
 				vo->readFrames = 0;
 			}
 		}
-		long framesToMix = remaining < framesPerBuffer ? remaining : framesPerBuffer;
+		long framesToMix = remaining < framesPerBuffer ? remaining : framesAvailable;
 		long sampleOffset = vo->readFrames * 2;
 		float volume = a->volumes[s->volGroup] * s->volume;
-
+		/*
 		for (long i = 0; i < framesToMix * 2; i++) {
 			long buffIndex = sampleOffset + i;
 			if (buffIndex < s->totalFrames * 2) {
 				out[i] += s->buff[buffIndex] * volume;
 			}
 		}
+		*/
+		for (long frame = 0; frame < framesToMix; frame++) {
+			long outFrame = startFrame + frame;
+
+			long outIndex = outFrame * 2;
+			long buffIndex = sampleOffset + frame * 2;
+			out[outIndex] += s->buff[buffIndex] * volume;
+			out[outIndex + 1] += s->buff[buffIndex + 1] * volume;
+		}
 		vo->readFrames += framesToMix;
+		vo->bufferOffset = 0;
 	}
 
 	for (long i = 0; i < framesPerBuffer * 2; i++) {

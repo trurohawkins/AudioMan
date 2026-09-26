@@ -137,18 +137,22 @@ void addAudioCommand(int cmd, int obj, double data) {
 }
 
 void parseAudioEvents() {
-	int command;
-	while (IntQueue_aqPop(&audioEventQueue, &command)) {
-		if (eventManifest[command].func != 0) {
-			void *data = eventManifest[command].data;
-			eventManifest[command].func(data);
+	AudioEventMessage command;
+	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &command)) {
+		if (eventManifest[command.data].func != 0) {
+			if (Pa_GetStreamTime(aMan->stream) >= command.eventTime) {
+				void *data = eventManifest[command.data].data;
+				eventManifest[command.data].func(data);
+			} else {
+				//delay event
+			}
 		}
 	}
 }
 
 void flushAudioEvents() {
-	int toilet;
-	while (IntQueue_aqPop(&audioEventQueue, &toilet)) {}
+	AudioEventMessage toilet;
+	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &toilet)) {}
 }
 
 void freeSound(void *snd) {

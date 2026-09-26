@@ -1,6 +1,6 @@
 #ifndef AUDIOMAN
 #define AUDIOMAN
-
+#include <inttypes.h>
 #include <portaudio.h>
 #include <sndfile.h>
 #define SOUND_MAX 256
@@ -25,6 +25,11 @@ typedef struct Sound {
 	bool scheduled;
 	long long intervalFrames;
 } Sound;
+
+typedef struct {
+	int data;
+	double eventTime;
+} AudioEventMessage;
 
 typedef struct {
 	int type;
