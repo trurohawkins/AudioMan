@@ -26,9 +26,9 @@ int count = 0;
 
 void specialSound(void *sound) {
 	uint64_t now = nowMS();
-	//printf("elapsed %" PRIu64 "\n", now - lastTime);
-	elapsed[count] = now - lastTime;
-	count++;
+	printf(" speical elapsed %" PRIu64 "\n", now - lastTime);
+	//elapsed[count] = now - lastTime;
+	//count++;
 	lastTime = now;
 	/*
 	int *s0 = sound;
@@ -41,6 +41,10 @@ void specialSound(void *sound) {
 		poo = false;
 	}
 	*/
+}
+
+void foopy(void *ound) {
+	printf("popp\n");
 }
 
 
@@ -57,6 +61,7 @@ int main() {
 	double f2 = 2.0;
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
 	scheduleEvent(specialSound, 0, 1.0);
+	scheduleEvent(foopy, 0, 4  * 0.3);
 	lastTime = nowUS();
 	while (running) {
 		parseAudioEvents();

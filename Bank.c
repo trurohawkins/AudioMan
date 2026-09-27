@@ -96,6 +96,7 @@ int scheduleEvent(void (*func)(void*), void *data, double frequency) {
 		}
 	}
 	if (event != -1) {
+		printf("scheduled evemt\n");
 		eventManifest[event].func = func;
 		eventManifest[event].data = data;
 		addAudioCommand(1, event, frequency);
@@ -138,9 +139,10 @@ void addAudioCommand(int cmd, int obj, double data) {
 
 void executeEvent(AudioEventMessage *command) {
 	if (command) {
-		void *data = eventManifest[command->data].data;
-		if (data) {
-			eventManifest[command->data].func(data);
+		AudioEventData aed = eventManifest[command->data];
+		void *data = aed.data;
+		if (aed.func) {
+			aed.func(data);
 		}
 	}
 }
@@ -160,10 +162,9 @@ void parseAudioEvents() {
 	while (!heapIsEmpty(&audioEventMessageHeap)) {
 		AudioEventMessage *check = heapPeek(&audioEventMessageHeap);
 		if (check) {
-			//printf("next audio event message should happen at %f and it is %f\n", check->eventTime, Pa_GetStreamTime(aMan->stream));
 			if (Pa_GetStreamTime(aMan->stream) >= check->eventTime) {
-				heapPop(&audioEventMessageHeap, check);
 				executeEvent(check);
+				heapPop(&audioEventMessageHeap, 0);
 			} else {
 				break;
 			}

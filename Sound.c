@@ -341,6 +341,7 @@ void changeVolGroup(Sound *s, int group) {
 }
 
 void endAudio() {
+		heapDestroy(&audioEventMessageHeap);
 	if (aMan && aMan->stream) {
 		PaError err = Pa_StopStream(aMan->stream);
 		if (err != paNoError) {
