@@ -83,6 +83,7 @@ void removeAudioEvent(int type, int data);
 
 void parseAudioEvents();
 void flushAudioEvents();
+int compareAudioEventMessages(const void *a, const void *b, void *context);
 void freeSound(void *snd);
 //Frames PerBuffer
 #define FPB 4096

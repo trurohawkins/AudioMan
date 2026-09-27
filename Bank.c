@@ -51,11 +51,11 @@ void playAudio(int sound) {
 void stopAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		/*
-		AudioCommand ac;
-		ac.cmd = 2;
-		ac.data = sound;
-		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		*/
+			 AudioCommand ac;
+			 ac.cmd = 2;
+			 ac.data = sound;
+			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		 */
 		addAudioCommand(2, sound, 0);
 	}
 }
@@ -63,12 +63,12 @@ void stopAudio(int sound) {
 void scheduleAudio(int sound, double frequency) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		/*
-		AudioCommand ac;
-		ac.cmd = 0;
-		ac.sound = sound;
-		ac.data = frequency;
-		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		*/
+			 AudioCommand ac;
+			 ac.cmd = 0;
+			 ac.sound = sound;
+			 ac.data = frequency;
+			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		 */
 		addAudioCommand(0, sound, frequency);
 	}
 }
@@ -76,12 +76,12 @@ void scheduleAudio(int sound, double frequency) {
 void unScheduleAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		/*
-		AudioCommand ac;
-		ac.cmd = 3;
-		ac.data = 1;
-		ac.sound = sound;
-		aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		*/
+			 AudioCommand ac;
+			 ac.cmd = 3;
+			 ac.data = 1;
+			 ac.sound = sound;
+			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
+		 */
 		// 1 indicates sound rather than event
 		addAudioCommand(3, sound, 1);
 	}
@@ -136,15 +136,36 @@ void addAudioCommand(int cmd, int obj, double data) {
 	AudioCommandQueue_aqPush(&audioQueue, ac);
 }
 
+void executeEvent(AudioEventMessage *command) {
+	if (command) {
+		void *data = eventManifest[command->data].data;
+		if (data) {
+			eventManifest[command->data].func(data);
+		}
+	}
+}
+
 void parseAudioEvents() {
 	AudioEventMessage command;
 	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &command)) {
 		if (eventManifest[command.data].func != 0) {
 			if (Pa_GetStreamTime(aMan->stream) >= command.eventTime) {
-				void *data = eventManifest[command.data].data;
-				eventManifest[command.data].func(data);
+				executeEvent(&command);
 			} else {
 				//delay event
+				heapPush(&audioEventMessageHeap, &command);
+			}
+		}
+	}
+	while (!heapIsEmpty(&audioEventMessageHeap)) {
+		AudioEventMessage *check = heapPeek(&audioEventMessageHeap);
+		if (check) {
+			//printf("next audio event message should happen at %f and it is %f\n", check->eventTime, Pa_GetStreamTime(aMan->stream));
+			if (Pa_GetStreamTime(aMan->stream) >= check->eventTime) {
+				heapPop(&audioEventMessageHeap, check);
+				executeEvent(check);
+			} else {
+				break;
 			}
 		}
 	}
@@ -153,6 +174,19 @@ void parseAudioEvents() {
 void flushAudioEvents() {
 	AudioEventMessage toilet;
 	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &toilet)) {}
+}
+
+int compareAudioEventMessages(const void *a, const void *b, void *context) {
+	AudioEventMessage x = *(const AudioEventMessage *)a;
+	AudioEventMessage y = *(const AudioEventMessage *)b;
+
+	if (x.eventTime < y.eventTime) {
+		return -1;
+	} else if (x.eventTime > y.eventTime) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 void freeSound(void *snd) {

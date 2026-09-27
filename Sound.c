@@ -9,6 +9,9 @@ DECLARE_SPSC(AudioEventMessage, AudioEventMessageQueue, 256)
 AudioEventMessageQueue audioEventQueue;
 AudioEventScheduler *scheduler = 0;
 
+#define AEM_HEAPSIZE 64
+Heap audioEventMessageHeap;
+
 #include "Bank.c"
 
 
@@ -64,6 +67,7 @@ int initAudio() {
 	const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
 	aMan->sampleRate = info->sampleRate;
 	aMan->bpm = 120.0;
+	heapInit(&audioEventMessageHeap, sizeof(AudioEventMessage), AEM_HEAPSIZE, compareAudioEventMessages, 0);
 	return err;
 
 exit:

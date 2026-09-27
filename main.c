@@ -25,7 +25,7 @@ uint64_t elapsed[100];
 int count = 0;
 
 void specialSound(void *sound) {
-	uint64_t now = nowUS();
+	uint64_t now = nowMS();
 	//printf("elapsed %" PRIu64 "\n", now - lastTime);
 	elapsed[count] = now - lastTime;
 	count++;
