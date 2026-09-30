@@ -101,14 +101,14 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	long long bufferEnd = bufferStart + framesPerBuffer;
 
 	checkAudioCommands(a->currentFrame);
-	//printf("bufferStart %lld bufferEnd %lld\n", bufferStart, bufferEnd);
+	//printf("    bufferStart %lld bufferEnd %lld\n", bufferStart, bufferEnd);
 	if (!scheduler->paused) {
 		for (int i = 0; i < scheduler->eventNum; i++) {
 			AudioEvent *ae = &scheduler->events[i];
 			if (ae->type != 0) {
 				// maybe remove 1st check so we can catch up if neede
 				// currently we will drop it if its too far behind
-				//printf("event %i triggerFrame %lld\n", i, ae->nextTriggerFrame);
+				//printf("      event %i triggerFrame %lld\n", i, ae->nextTriggerFrame);
 				if (ae->nextTriggerFrame >= bufferStart) {
 					while (ae->nextTriggerFrame < bufferEnd) {
 						if (!ae->paused) {

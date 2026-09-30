@@ -68,7 +68,7 @@ int main() {
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
 	int event = scheduleEvent(specialSound, 0, 2.0);
 	event = scheduleEvent(foopy, 0, 4  * 0.3);
-	lastTime = nowMS();
+	lastTime = lastTime1 = nowMS();
 	char buff[32];
 	bool eventPaused = false;
 	uint64_t pauseTime;
@@ -76,12 +76,14 @@ int main() {
 		ssize_t r = read(STDIN_FILENO, buff, sizeof(buff));
 		if (r >= 1) {
 			eventPaused = !eventPaused;
-			//pauseAudioEvents(eventPaused);
+			pauseAudioEvents(eventPaused);
+			/*
 			if (eventPaused) {
 				pauseAudioEvent(event);
 			} else {
 				unpauseAudioEvent(event);
 			}
+			*/
 			//printf("event: %i at %" PRIu64 "\n", eventPaused, nowMS());
 		}
 		parseAudioEvents();
