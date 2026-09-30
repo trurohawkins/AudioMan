@@ -50,38 +50,18 @@ void playAudio(int sound) {
 
 void stopAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		/*
-			 AudioCommand ac;
-			 ac.cmd = 2;
-			 ac.data = sound;
-			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		 */
 		addAudioCommand(2, sound, 0);
 	}
 }
 
 void scheduleAudio(int sound, double frequency) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		/*
-			 AudioCommand ac;
-			 ac.cmd = 0;
-			 ac.sound = sound;
-			 ac.data = frequency;
-			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		 */
 		addAudioCommand(0, sound, frequency);
 	}
 }
 
 void unScheduleAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		/*
-			 AudioCommand ac;
-			 ac.cmd = 3;
-			 ac.data = 1;
-			 ac.sound = sound;
-			 aqPush(&audioQueue, &ac, sizeof(AudioCommand));
-		 */
 		// 1 indicates sound rather than event
 		addAudioCommand(3, sound, 1);
 	}
@@ -96,7 +76,6 @@ int scheduleEvent(void (*func)(void*), void *data, double frequency) {
 		}
 	}
 	if (event != -1) {
-		printf("scheduled evemt\n");
 		eventManifest[event].func = func;
 		eventManifest[event].data = data;
 		addAudioCommand(1, event, frequency);
@@ -125,8 +104,12 @@ void unpauseAudioEvent(int event) {
 	}
 }
 
+void pauseAudioEvents(bool pause) {
+	addAudioCommand(6, 0, pause);
+}
+
 void setVolume(int sound, double volume) {
-	addAudioCommand(6, sound, volume);
+	addAudioCommand(7, sound, volume);
 }
 
 void addAudioCommand(int cmd, int obj, double data) {
@@ -177,6 +160,7 @@ void flushAudioEvents() {
 	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &toilet)) {}
 }
 
+// used for the event message heap
 int compareAudioEventMessages(const void *a, const void *b, void *context) {
 	AudioEventMessage x = *(const AudioEventMessage *)a;
 	AudioEventMessage y = *(const AudioEventMessage *)b;

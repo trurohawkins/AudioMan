@@ -100,36 +100,38 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	long long bufferStart = a->currentFrame;
 	long long bufferEnd = bufferStart + framesPerBuffer;
 
-	checkAudioCommands();
-	for (int i = 0; i < scheduler->eventNum; i++) {
-		AudioEvent *ae = &scheduler->events[i];
-		if (ae->type != 0) {
-			// maybe remove 1st check so we can catch up if neede
-			// currently we will drop it if its too far behind
-			if (ae->nextTriggerFrame >= bufferStart) {
-				while (ae->nextTriggerFrame < bufferEnd) {
-
-					long long triggerFrame = ae->nextTriggerFrame;
-					//how far into audio buffer did the event occur?
-					long long offset = triggerFrame - bufferStart;
-					//printf("Audio event: frame=%lld offset=%lld\n", triggerFrame, offset);
-
-					if (!ae->paused) {
-						if (ae->type == 1) {
-							if (!spawnVoice(ae, bufferStart, bufferEnd)) {
-								break;
+	checkAudioCommands(a->currentFrame);
+	//printf("bufferStart %lld bufferEnd %lld\n", bufferStart, bufferEnd);
+	if (!scheduler->paused) {
+		for (int i = 0; i < scheduler->eventNum; i++) {
+			AudioEvent *ae = &scheduler->events[i];
+			if (ae->type != 0) {
+				// maybe remove 1st check so we can catch up if neede
+				// currently we will drop it if its too far behind
+				//printf("event %i triggerFrame %lld\n", i, ae->nextTriggerFrame);
+				if (ae->nextTriggerFrame >= bufferStart) {
+					while (ae->nextTriggerFrame < bufferEnd) {
+						if (!ae->paused) {
+							long long triggerFrame = ae->nextTriggerFrame;
+							//how far into audio buffer did the event occur?
+							long long offset = triggerFrame - bufferStart;
+							//printf("Audio event: frame=%lld offset=%lld\n", triggerFrame, offset);
+								if (ae->type == 1) {
+									if (!spawnVoice(ae, bufferStart, bufferEnd)) {
+										break;
+									}
+								} else {
+									AudioEventMessage aem = {
+										.data = ae->data,
+										.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
+									};
+									// push to signal to main thread to execute event
+									AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
+								}
 							}
-						} else {
-							AudioEventMessage aem = {
-								.data = ae->data,
-								.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
-							};
-							// push to signal to main thread to execute event
-							AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
-						}
+							// set the next trigger event time
+							ae->nextTriggerFrame += ae->intervalFrames;
 					}
-					// set the next trigger event time
-					ae->nextTriggerFrame += ae->intervalFrames;
 				}
 			}
 		}
@@ -190,7 +192,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	return paContinue;
 }
 
-void checkAudioCommands() {
+void checkAudioCommands(long long currentFrame) {
 	AudioCommand ac;
 	while (AudioCommandQueue_aqPop(&audioQueue, &ac)) {
 		//play audio command
@@ -226,6 +228,9 @@ void checkAudioCommands() {
 		} else if (ac.cmd == 5) {
 			setPauseOnEvent(ac.data, ac.obj, false);
 		} else if (ac.cmd == 6) {
+			//pause all events
+			setPauseOnEvents(ac.data == 1, currentFrame);
+		} else if (ac.cmd == 7) {
 			Sound *s = &sounds->bank[ac.obj];
 			s->volume = ac.data;
 		}
@@ -280,6 +285,25 @@ void setPauseOnEvent(int type, int data, bool state) {
 		AudioEvent *ae = &scheduler->events[i];
 		if (ae->type == type && ae->data == data) {
 			ae->paused = state;
+		}
+	}
+}
+
+void setPauseOnEvents(bool state, long long bufferStart) {
+	if (state) {
+		if (!scheduler->paused) {
+			scheduler->paused = true;
+			scheduler->pauseFrame = bufferStart;
+		}
+	} else {
+		if (scheduler->paused) {
+			scheduler->paused = false;
+			for (int i = 0; i < scheduler->eventNum; i++) {
+				AudioEvent *ae = &scheduler->events[i];
+				if (ae->type != 0) {// && ae->data != 0) {
+					ae->nextTriggerFrame = bufferStart + (ae->nextTriggerFrame - scheduler->pauseFrame);
+				}
+			}
 		}
 	}
 }
@@ -341,7 +365,7 @@ void changeVolGroup(Sound *s, int group) {
 }
 
 void endAudio() {
-		heapDestroy(&audioEventMessageHeap);
+	heapDestroy(&audioEventMessageHeap);
 	if (aMan && aMan->stream) {
 		PaError err = Pa_StopStream(aMan->stream);
 		if (err != paNoError) {

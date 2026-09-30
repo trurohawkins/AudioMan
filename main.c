@@ -1,11 +1,13 @@
 #include "AudioMan.h"
 #include <signal.h>
+#include <fcntl.h>
 
 bool poo = false;
 volatile bool running  = true;
 float volume = 1.0;
 int volEvent = -1;
 uint64_t lastTime = 0;
+uint64_t lastTime1 = 0;
 
 void lowerVolume(void *sound) {
 	int *s1 = sound;
@@ -26,7 +28,7 @@ int count = 0;
 
 void specialSound(void *sound) {
 	uint64_t now = nowMS();
-	printf(" speical elapsed %" PRIu64 "\n", now - lastTime);
+	printf("now %" PRIu64 " speical elapsed %" PRIu64 "\n", now, now - lastTime);
 	//elapsed[count] = now - lastTime;
 	//count++;
 	lastTime = now;
@@ -44,13 +46,17 @@ void specialSound(void *sound) {
 }
 
 void foopy(void *ound) {
-	printf("popp\n");
+	uint64_t now = nowMS();
+	printf("foopy elpased: %" PRIu64 "\n", now - lastTime1);
+	lastTime1 = now;
 }
 
 
 int main() {
-	signal(SIGINT, handler);
 	initAudio();
+	signal(SIGINT, handler);
+	int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
 	//int sound0 = processAudioFile("sounds/a1.wav", false);
 	//playAudio(sound0);
@@ -60,10 +66,24 @@ int main() {
 	//scheduleAudio(sound1, frequency);
 	double f2 = 2.0;
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
-	scheduleEvent(specialSound, 0, 1.0);
-	scheduleEvent(foopy, 0, 4  * 0.3);
-	lastTime = nowUS();
+	int event = scheduleEvent(specialSound, 0, 2.0);
+	event = scheduleEvent(foopy, 0, 4  * 0.3);
+	lastTime = nowMS();
+	char buff[32];
+	bool eventPaused = false;
+	uint64_t pauseTime;
 	while (running) {
+		ssize_t r = read(STDIN_FILENO, buff, sizeof(buff));
+		if (r >= 1) {
+			eventPaused = !eventPaused;
+			//pauseAudioEvents(eventPaused);
+			if (eventPaused) {
+				pauseAudioEvent(event);
+			} else {
+				unpauseAudioEvent(event);
+			}
+			//printf("event: %i at %" PRIu64 "\n", eventPaused, nowMS());
+		}
 		parseAudioEvents();
 	}
 	endAudio();

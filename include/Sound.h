@@ -37,12 +37,15 @@ typedef struct {
 
 	long long nextTriggerFrame;
 	bool paused;
+	long long pauseFrame;
 	long long intervalFrames;
 } AudioEvent;
 
 typedef struct {
 	AudioEvent events[EVENT_MAX];
 	int eventNum;
+	bool paused;
+	long long pauseFrame;
 } AudioEventScheduler;
 
 #define AUDIO_EVENT_MAX 256
@@ -76,7 +79,9 @@ bool addAudioEvent(int type, int data, double frequency);
 void unscheduleEvent(int event);
 void pauseAudioEvent(int event);
 void unpauseAudioEvent(int event);
+void pauseAudioEvents(bool pause);
 void setPauseOnEvent(int type, int data, bool state);
+void setPauseOnEvents(bool state, long long bufferStart);
 
 void setVolume(int sound, double volume);
 void removeAudioEvent(int type, int data);
@@ -118,7 +123,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
                           const PaStreamCallbackTimeInfo* timeInfo,
                           PaStreamCallbackFlags statusFlags,
                           void *userData);
-void checkAudioCommands();
+void checkAudioCommands(long long currentFrame);
 bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
 Voice *findFreeMixSpot();
 void changeVolumeGroup(int group, float vol);
