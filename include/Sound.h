@@ -20,10 +20,6 @@ typedef struct Sound {
 	//only audio thread controls
 	bool active;
 	long readFrames;
-	//timing scheduling
-	long long nextTriggerFrame;
-	bool scheduled;
-	long long intervalFrames;
 } Sound;
 
 typedef struct {

@@ -60,7 +60,7 @@ int initAudio() {
 	const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
 	aMan->sampleRate = info->sampleRate;
 	aMan->bpm = 120.0;
-	initAudioEventScheduling();
+	initAudioEventScheduling(16);
 	return err;
 
 exit:
@@ -92,7 +92,6 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	AudioManager *a = userData;
 	long long bufferStart = a->currentFrame;
 	long long bufferEnd = bufferStart + framesPerBuffer;
-
 	checkAudioCommands(a->currentFrame);
 	//printf("    bufferStart %lld bufferEnd %lld\n", bufferStart, bufferEnd);
 	checkScheduler(bufferStart, bufferEnd, timeInfo);
@@ -182,14 +181,14 @@ void checkAudioCommands(long long currentFrame) {
 				}
 			}
 		} else if (ac.cmd == 3) {
-			removeAudioEvent(ac.data, ac.obj);
+			removeAudioEvents(ac.obj);
 		} else if (ac.cmd == 4) {
-			setPauseOnEvent(ac.data, ac.obj, true);
+			setPauseOnEvent(ac.obj, ac.data == 1);
 		} else if (ac.cmd == 5) {
-			setPauseOnEvent(ac.data, ac.obj, false);
-		} else if (ac.cmd == 6) {
 			//pause all events
 			setPauseOnEvents(ac.data == 1, currentFrame);
+		} else if (ac.cmd == 6) {
+			//add rhythm
 		} else if (ac.cmd == 7) {
 			Sound *s = &sounds->bank[ac.obj];
 			s->volume = ac.data;

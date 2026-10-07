@@ -67,6 +67,7 @@ int main() {
 	double f2 = 2.0;
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
 	int event = scheduleEvent(specialSound, 0, 2.0);
+	printf("scheduled event %i\n", event);
 	event = scheduleEvent(foopy, 0, 4  * 0.3);
 	lastTime = lastTime1 = nowMS();
 	char buff[32];

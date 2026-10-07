@@ -1,14 +1,17 @@
 #pragma once
 #include "AudioMan.h"
+
 // audio thread side
 typedef struct {
 	int type;
-	int data;
+	int obj; //reference to cllaback in eventManifest or sound in soundbank
 
 	long long nextTriggerFrame;
 	bool paused;
-	long long pauseFrame;
 	long long intervalFrames;
+
+	BitSet *rhythm;
+	int step;
 } AudioEvent;
 
 #define AUDIO_EVENT_MAX 256
@@ -30,13 +33,14 @@ typedef struct {
 	double eventTime;
 } AudioEventMessage;
 
-void initAudioEventScheduling();
+void initAudioEventScheduling(int rhythmsSize);
 int scheduleEvent(void (*func)(void*), void *data, double frequency);
 bool addAudioEvent(int type, int data, double frequency);
-void unscheduleEvent(int event);
-void removeAudioEvent(int type, int data);
-void setPauseOnEvent(int type, int data, bool state);
+void unscheduleEvents(int start);
+void removeAudioEvents(int start);
+void setPauseOnEvent(int event, bool state);
 void setPauseOnEvents(bool state, long long bufferStart);
+int addRhythm(int length, uint64_t pattern);
 
 void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCallbackTimeInfo *timeInfo);
 

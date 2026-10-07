@@ -69,18 +69,18 @@ void unScheduleAudio(int sound) {
 
 void pauseAudioEvent(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		addAudioCommand(4, event, 2);
+		addAudioCommand(4, event, true);
 	}
 }
 
 void unpauseAudioEvent(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		addAudioCommand(5, event, 2);
+		addAudioCommand(4, event, false);
 	}
 }
 
 void pauseAudioEvents(bool pause) {
-	addAudioCommand(6, 0, pause);
+	addAudioCommand(5, 0, pause);
 }
 
 void setVolume(int sound, double volume) {
