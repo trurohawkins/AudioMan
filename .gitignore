@@ -2,5 +2,6 @@
 *.d
 lib/
 lsan.supp
+debug.log
 
 audioTest
