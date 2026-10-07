@@ -5,12 +5,6 @@ AudioManager *aMan = 0;
 DECLARE_SPSC(AudioCommand, AudioCommandQueue, 256)
 
 AudioCommandQueue audioQueue;
-DECLARE_SPSC(AudioEventMessage, AudioEventMessageQueue, 256)
-AudioEventMessageQueue audioEventQueue;
-AudioEventScheduler *scheduler = 0;
-
-#define AEM_HEAPSIZE 64
-Heap audioEventMessageHeap;
 
 #include "Bank.c"
 
@@ -41,7 +35,6 @@ int initAudio() {
 	double sampleRate = 44100.0;
 	
 	sounds = calloc(1, sizeof(SoundBank));
-	scheduler = calloc(1, sizeof(AudioEventScheduler));
 
 	err = Pa_OpenStream(
 			&aMan->stream,
@@ -67,7 +60,7 @@ int initAudio() {
 	const PaStreamInfo *info = Pa_GetStreamInfo(aMan->stream);
 	aMan->sampleRate = info->sampleRate;
 	aMan->bpm = 120.0;
-	heapInit(&audioEventMessageHeap, sizeof(AudioEventMessage), AEM_HEAPSIZE, compareAudioEventMessages, 0);
+	initAudioEventScheduling();
 	return err;
 
 exit:
@@ -102,40 +95,7 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 
 	checkAudioCommands(a->currentFrame);
 	//printf("    bufferStart %lld bufferEnd %lld\n", bufferStart, bufferEnd);
-	if (!scheduler->paused) {
-		for (int i = 0; i < scheduler->eventNum; i++) {
-			AudioEvent *ae = &scheduler->events[i];
-			if (ae->type != 0) {
-				// maybe remove 1st check so we can catch up if neede
-				// currently we will drop it if its too far behind
-				//printf("      event %i triggerFrame %lld\n", i, ae->nextTriggerFrame);
-				if (ae->nextTriggerFrame >= bufferStart) {
-					while (ae->nextTriggerFrame < bufferEnd) {
-						if (!ae->paused) {
-							long long triggerFrame = ae->nextTriggerFrame;
-							//how far into audio buffer did the event occur?
-							long long offset = triggerFrame - bufferStart;
-							//printf("Audio event: frame=%lld offset=%lld\n", triggerFrame, offset);
-								if (ae->type == 1) {
-									if (!spawnVoice(ae, bufferStart, bufferEnd)) {
-										break;
-									}
-								} else {
-									AudioEventMessage aem = {
-										.data = ae->data,
-										.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
-									};
-									// push to signal to main thread to execute event
-									AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
-								}
-							}
-							// set the next trigger event time
-							ae->nextTriggerFrame += ae->intervalFrames;
-					}
-				}
-			}
-		}
-	}
+	checkScheduler(bufferStart, bufferEnd, timeInfo);
 	// mix of current songs
 	for (int i = 0; i < VOICE_MAX; i++) {
 		Voice *vo = &a->mix[i];
@@ -237,97 +197,6 @@ void checkAudioCommands(long long currentFrame) {
 	}
 }
 
-bool addAudioEvent(int type, int data, double frequency) {
-	if (scheduler->eventNum >= EVENT_MAX) {
-		// we need to check if there are EVENT_MAX events happening, 
-		//if not we want to reorder them downwards and adjust scheduler->eventNum
-		// if there are, we return false
-	}
-	int freeSpace = -1;
-	for (int i = 0; i < EVENT_MAX; i++) {
-		int event = (scheduler->eventNum + i) % EVENT_MAX;
-		if (scheduler->events[event].type == 0) {
-			freeSpace = event;
-			break;
-		}
-	}
-	if (freeSpace >= 0) {
-		AudioEvent ae;
-		ae.type = type;
-		ae.data = data;
-		ae.paused = false;
-		ae.intervalFrames = (long long)((frequency / (aMan->bpm/60.0)) * aMan->sampleRate);
-		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
-		scheduler->events[freeSpace] = ae;
-		if (scheduler->eventNum < EVENT_MAX-1) {
-			scheduler->eventNum++;
-		}
-		return true;
-	}
-	return false;
-}
-
-void removeAudioEvent(int type, int data) {
-	for (int i = 0; i < scheduler->eventNum; i++) {
-		AudioEvent *ae = &scheduler->events[i];
-		if (ae->type == type && ae->data == data) {
-			ae->type = 0;
-			ae->data = 0;
-			if (i >= scheduler->eventNum - 1) {
-				scheduler->eventNum--;
-			}
-		}
-	}
-}
-
-void setPauseOnEvent(int type, int data, bool state) {
-	for (int i = 0; i < scheduler->eventNum; i++) {
-		AudioEvent *ae = &scheduler->events[i];
-		if (ae->type == type && ae->data == data) {
-			ae->paused = state;
-		}
-	}
-}
-
-void setPauseOnEvents(bool state, long long bufferStart) {
-	if (state) {
-		if (!scheduler->paused) {
-			scheduler->paused = true;
-			scheduler->pauseFrame = bufferStart;
-		}
-	} else {
-		if (scheduler->paused) {
-			scheduler->paused = false;
-			for (int i = 0; i < scheduler->eventNum; i++) {
-				AudioEvent *ae = &scheduler->events[i];
-				if (ae->type != 0) {// && ae->data != 0) {
-					ae->nextTriggerFrame = bufferStart + (ae->nextTriggerFrame - scheduler->pauseFrame);
-				}
-			}
-		}
-	}
-}
-
-bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd) {
-	Sound *s = &sounds->bank[ae->data];
-	int mixSpot = 0;
-	Voice *vo = NULL;//findFreeMixSpot();
-	for (;mixSpot < VOICE_MAX; mixSpot++) {
-		if (aMan->mix[mixSpot].sound == NULL) {
-			vo = &aMan->mix[mixSpot];
-			break;
-		}
-	}
-	if (vo) {
-		vo->sound = s;
-		vo->readFrames = 0;
-		vo->bufferOffset = ae->nextTriggerFrame - bufferStart;
-	} else {
-		return false;
-	}
-	return true;
-}
-
 Voice *findFreeMixSpot() {
 	for (int i = 0; i < VOICE_MAX; i++) {
 		if (aMan->mix[i].sound == NULL) {
@@ -365,7 +234,6 @@ void changeVolGroup(Sound *s, int group) {
 }
 
 void endAudio() {
-	heapDestroy(&audioEventMessageHeap);
 	if (aMan && aMan->stream) {
 		PaError err = Pa_StopStream(aMan->stream);
 		if (err != paNoError) {
@@ -374,6 +242,7 @@ void endAudio() {
 		Pa_CloseStream(aMan->stream);
 		aMan->stream = NULL;
 	}
+	endAudioScheduling();
 	freeAudioManager();
 	Pa_Terminate();
 }
@@ -382,8 +251,6 @@ void freeAudioManager() {
 	if (aMan) {
 		freeSoundBank();
 		//free events as well
-		free(scheduler);
-		scheduler = NULL;
 		free(aMan->volumes);
 		aMan->volumes = NULL;
 		free(aMan);

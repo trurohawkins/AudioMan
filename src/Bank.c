@@ -1,4 +1,3 @@
-AudioEventData eventManifest[AUDIO_EVENT_MAX];
 SoundBank *sounds = 0;
 
 int processAudioFile(char *file, bool loop) {
@@ -67,30 +66,6 @@ void unScheduleAudio(int sound) {
 	}
 }
 
-int scheduleEvent(void (*func)(void*), void *data, double frequency) {
-	int event = -1;
-	for (int i = 0; i < AUDIO_EVENT_MAX; i++) {
-		if (eventManifest[i].func == 0) {
-			event = i;
-			break;
-		}
-	}
-	if (event != -1) {
-		eventManifest[event].func = func;
-		eventManifest[event].data = data;
-		addAudioCommand(1, event, frequency);
-	}
-	return event;
-}
-
-void unscheduleEvent(int event) {
-	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		// 2 indicates event rather than sound
-		addAudioCommand(3, event, 2);
-		eventManifest[event].func = 0;
-		eventManifest[event].data = 0;
-	}
-}
 
 void pauseAudioEvent(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
@@ -118,60 +93,6 @@ void addAudioCommand(int cmd, int obj, double data) {
 	ac.obj = obj;
 	ac.data = data;
 	AudioCommandQueue_aqPush(&audioQueue, ac);
-}
-
-void executeEvent(AudioEventMessage *command) {
-	if (command) {
-		AudioEventData aed = eventManifest[command->data];
-		void *data = aed.data;
-		if (aed.func) {
-			aed.func(data);
-		}
-	}
-}
-
-void parseAudioEvents() {
-	AudioEventMessage command;
-	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &command)) {
-		if (eventManifest[command.data].func != 0) {
-			if (Pa_GetStreamTime(aMan->stream) >= command.eventTime) {
-				executeEvent(&command);
-			} else {
-				//delay event
-				heapPush(&audioEventMessageHeap, &command);
-			}
-		}
-	}
-	while (!heapIsEmpty(&audioEventMessageHeap)) {
-		AudioEventMessage *check = heapPeek(&audioEventMessageHeap);
-		if (check) {
-			if (Pa_GetStreamTime(aMan->stream) >= check->eventTime) {
-				executeEvent(check);
-				heapPop(&audioEventMessageHeap, 0);
-			} else {
-				break;
-			}
-		}
-	}
-}
-
-void flushAudioEvents() {
-	AudioEventMessage toilet;
-	while (AudioEventMessageQueue_aqPop(&audioEventQueue, &toilet)) {}
-}
-
-// used for the event message heap
-int compareAudioEventMessages(const void *a, const void *b, void *context) {
-	AudioEventMessage x = *(const AudioEventMessage *)a;
-	AudioEventMessage y = *(const AudioEventMessage *)b;
-
-	if (x.eventTime < y.eventTime) {
-		return -1;
-	} else if (x.eventTime > y.eventTime) {
-		return 1;
-	} else {
-		return 0;
-	}
 }
 
 void freeSound(void *snd) {

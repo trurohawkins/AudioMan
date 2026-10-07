@@ -1,6 +1,7 @@
 TARGET = audioTest
 
 LIBDIR = lib/
+SRCDIR = src/
 INCDIR = include/
 
 HELPERDIR = ../HelperFuncs/
@@ -16,7 +17,7 @@ TSAN_LDFLAGS = -fsanitize=thread
 PROD_CFLAGS = -O2
 PROD_LDFLAGS =
 
-CFLAGS = -MMD -MP -I$(HELPERINC) -I$(INCDIR)
+CFLAGS = -MMD -MP -I$(HELPERINC) -I$(INCDIR) -I$(SRCDIR)
 LDFLAGS =
 
 dev: CFLAGS += $(DEV_CFLAGS)
@@ -37,14 +38,17 @@ $(TARGET): $(INCDIR)AudioMan.h  $(LIBDIR)libAudioMan.a  $(HELPERLIB)libHelper.a 
 $(HELPERLIB)libHelper.a:
 	$(MAKE) -C $(HELPERDIR)
 
-$(LIBDIR)libAudioMan.a: Sound.o | $(LIBDIR)
-	ar rs $@ Sound.o
+$(LIBDIR)libAudioMan.a: Sound.o AudioEvent.o | $(LIBDIR)
+	ar rs $@ Sound.o AudioEvent.o
 
 main.o: main.c
 	gcc $(CFLAGS) -c main.c -o $@
 
-Sound.o: Sound.c $(INCDIR)Sound.h Bank.c
-	gcc $(CFLAGS) -c Sound.c 
+AudioEvent.o: $(SRCDIR)AudioEvent.c $(INCDIR)AudioEvent.h
+	gcc $(CFLAGS) -c $<
+
+Sound.o: $(SRCDIR)Sound.c $(INCDIR)Sound.h $(SRCDIR)Bank.c
+	gcc $(CFLAGS) -c $<
 
 $(LIBDIR):
 	mkdir -p $(LIBDIR)

@@ -3,8 +3,8 @@
 #include <inttypes.h>
 #include <portaudio.h>
 #include <sndfile.h>
+#include "AudioMan.h"
 #define SOUND_MAX 256
-#define EVENT_MAX 256
 
 typedef struct Sound {
 	//immutable
@@ -27,34 +27,6 @@ typedef struct Sound {
 } Sound;
 
 typedef struct {
-	int data;
-	double eventTime;
-} AudioEventMessage;
-
-typedef struct {
-	int type;
-	int data;
-
-	long long nextTriggerFrame;
-	bool paused;
-	long long pauseFrame;
-	long long intervalFrames;
-} AudioEvent;
-
-typedef struct {
-	AudioEvent events[EVENT_MAX];
-	int eventNum;
-	bool paused;
-	long long pauseFrame;
-} AudioEventScheduler;
-
-#define AUDIO_EVENT_MAX 256
-typedef struct {
-	void (*func)(void*);
-	void *data;
-} AudioEventData;
-
-typedef struct {
 	Sound *sound;
 	long readFrames;
 	long long bufferOffset;
@@ -65,6 +37,7 @@ typedef struct {
 	Sound bank[SOUND_MAX];
 	int soundNum;
 } SoundBank;
+extern SoundBank *sounds;
 
 
 int processAudioFile(char *file, bool loop);
@@ -74,21 +47,12 @@ void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
-int scheduleEvent(void (*func)(void*), void *data, double frequency);
-bool addAudioEvent(int type, int data, double frequency);
-void unscheduleEvent(int event);
 void pauseAudioEvent(int event);
 void unpauseAudioEvent(int event);
 void pauseAudioEvents(bool pause);
-void setPauseOnEvent(int type, int data, bool state);
-void setPauseOnEvents(bool state, long long bufferStart);
 
 void setVolume(int sound, double volume);
-void removeAudioEvent(int type, int data);
 
-void parseAudioEvents();
-void flushAudioEvents();
-int compareAudioEventMessages(const void *a, const void *b, void *context);
 void freeSound(void *snd);
 //Frames PerBuffer
 #define FPB 4096
@@ -124,7 +88,6 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
                           PaStreamCallbackFlags statusFlags,
                           void *userData);
 void checkAudioCommands(long long currentFrame);
-bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd);
 Voice *findFreeMixSpot();
 void changeVolumeGroup(int group, float vol);
 void changeVolGroup(Sound *s, int group);
