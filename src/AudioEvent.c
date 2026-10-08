@@ -36,7 +36,7 @@ int scheduleEvent(void (*func)(void*), void *data, double frequency) {
 	if (curEvent < AUDIO_EVENT_MAX) {
 		eventManifest[curEvent].func = func;
 		eventManifest[curEvent].data = data;
-		addAudioCommand(1, curEvent, frequency);
+		addAudioCommand(1, curEvent, &frequency, sizeof(double));
 		curEvent++;
 	}
 	return curEvent - 1;
@@ -76,7 +76,7 @@ void unscheduleEvents(int event) {
 			eventManifest[i].func = 0;
 			eventManifest[i].data = 0;
 		}
-		addAudioCommand(3, event, 0);
+		addAudioCommand(3, event, 0, 0);
 	}
 }
 

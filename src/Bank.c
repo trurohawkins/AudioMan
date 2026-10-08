@@ -42,56 +42,50 @@ void playAudio(int sound) {
 		AudioCommand ac;
 		ac.cmd = 0;
 		ac.obj = sound;
-		ac.data = 0;
 		AudioCommandQueue_aqPush(&audioQueue, ac);
 	}
 }
 
 void stopAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		addAudioCommand(2, sound, 0);
+		addAudioCommand(2, sound, 0, 0);
 	}
 }
 
 void scheduleAudio(int sound, double frequency) {
 	if (sound >= 0 && sound < sounds->soundNum) {
-		addAudioCommand(0, sound, frequency);
+		addAudioCommand(0, sound, &frequency, sizeof(double));
 	}
 }
 
 void unScheduleAudio(int sound) {
 	if (sound >= 0 && sound < sounds->soundNum) {
 		// 1 indicates sound rather than event
-		addAudioCommand(3, sound, 1);
+		addAudioCommand(3, sound, 0, 0);
 	}
 }
 
 
-void pauseAudioEvent(int event) {
+void pauseAudioEvent(int event, bool state) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		addAudioCommand(4, event, true);
-	}
-}
-
-void unpauseAudioEvent(int event) {
-	if (event >= 0 && event < AUDIO_EVENT_MAX) {
-		addAudioCommand(4, event, false);
+		addAudioCommand(4, event, &state, sizeof(bool));
 	}
 }
 
 void pauseAudioEvents(bool pause) {
-	addAudioCommand(5, 0, pause);
+	addAudioCommand(5, 0, &pause, sizeof(bool));
 }
 
 void setVolume(int sound, double volume) {
-	addAudioCommand(7, sound, volume);
+	addAudioCommand(7, sound, &volume, sizeof(double));
 }
 
-void addAudioCommand(int cmd, int obj, double data) {
+void addAudioCommand(int cmd, int obj, void *data, uint16_t size) {
 	AudioCommand ac;
 	ac.cmd = cmd;
 	ac.obj = obj;
-	ac.data = data;
+	memcpy(ac.data, data, size);
+	ac.size = size;
 	AudioCommandQueue_aqPush(&audioQueue, ac);
 }
 

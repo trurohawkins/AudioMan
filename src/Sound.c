@@ -159,9 +159,11 @@ void checkAudioCommands(long long currentFrame) {
 			for (int i = 0; i < VOICE_MAX; i++) {
 				if (aMan->mix[i].sound == NULL) {
 					Sound *s = &sounds->bank[ac.obj];
-					if (ac.data != 0) {
+					if (ac.size != 0) {
 						s->loop = false;
-						addAudioEvent(1, ac.obj, ac.data);
+						double frequency;
+						memcpy(&frequency, ac.data, sizeof(double));
+						addAudioEvent(1, ac.obj, frequency);
 					} else {
 						aMan->mix[i].sound = s;
 						aMan->mix[i].readFrames = 0;
@@ -170,7 +172,9 @@ void checkAudioCommands(long long currentFrame) {
 				}
 			}
 		} else if(ac.cmd == 1) {
-			addAudioEvent(2, ac.obj, ac.data);
+			double frequency;
+			memcpy(&frequency, ac.data, sizeof(double));
+			addAudioEvent(2, ac.obj, frequency);
 		} else if (ac.cmd == 2) {
 			Sound *s = &sounds->bank[ac.obj];
 			for (int i = 0; i < VOICE_MAX; i++) {
@@ -183,15 +187,20 @@ void checkAudioCommands(long long currentFrame) {
 		} else if (ac.cmd == 3) {
 			removeAudioEvents(ac.obj);
 		} else if (ac.cmd == 4) {
-			setPauseOnEvent(ac.obj, ac.data == 1);
+			bool state;
+			memcpy(&state, ac.data, sizeof(bool));
+			setPauseOnEvent(ac.obj, state);
 		} else if (ac.cmd == 5) {
 			//pause all events
-			setPauseOnEvents(ac.data == 1, currentFrame);
+			bool state;
+			memcpy(&state, ac.data, sizeof(bool));
+			setPauseOnEvents(state, currentFrame);
 		} else if (ac.cmd == 6) {
 			//add rhythm
 		} else if (ac.cmd == 7) {
 			Sound *s = &sounds->bank[ac.obj];
-			s->volume = ac.data;
+			memcpy(&s->volume, ac.data, sizeof(double));
+			//s->volume = ac.data;
 		}
 	}
 }

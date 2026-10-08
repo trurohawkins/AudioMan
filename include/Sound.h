@@ -37,14 +37,13 @@ extern SoundBank *sounds;
 
 
 int processAudioFile(char *file, bool loop);
-void addAudioCommand(int cmd, int obj, double data);
+void addAudioCommand(int cmd, int obj, void *data, uint16_t size);
 
 void playAudio(int sound);
 void stopAudio(int sound);
 void scheduleAudio(int sound, double frequency);
 void unScheduleAudio(int sound);
-void pauseAudioEvent(int event);
-void unpauseAudioEvent(int event);
+void pauseAudioEvent(int event, bool pause);
 void pauseAudioEvents(bool pause);
 
 void setVolume(int sound, double volume);
@@ -54,10 +53,12 @@ void freeSound(void *snd);
 #define FPB 4096
 #define VOICE_MAX 256
 
+#define COMMAND_SIZE 256
 typedef struct {
 	int cmd;
 	int obj;
-	double data;
+	uint8_t data[COMMAND_SIZE];
+	uint16_t size;
 } AudioCommand;
 
 typedef struct AudioManager {
