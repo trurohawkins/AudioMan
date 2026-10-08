@@ -197,6 +197,19 @@ void checkAudioCommands(long long currentFrame) {
 			setPauseOnEvents(state, currentFrame);
 		} else if (ac.cmd == 6) {
 			//add rhythm
+			/*
+			if (ac.obj < scheduler->events.eventNum && ac.obj >= 0) {
+				BitSet *bs = addRhythm(ac.size, ac.data);
+				if (bs) {
+					AudioEvent *ae = &scheduler->events[ac.obj];
+					ae->rhythm = bs;
+				}
+			}
+			*/
+			uint64_t pattern;
+			memcpy(&pattern, ac.data, ac.size);
+			//BitSet *bs = addRhythm(pattern, ac.size);
+			setRhythm(ac.obj, pattern, ac.size);
 		} else if (ac.cmd == 7) {
 			Sound *s = &sounds->bank[ac.obj];
 			memcpy(&s->volume, ac.data, sizeof(double));

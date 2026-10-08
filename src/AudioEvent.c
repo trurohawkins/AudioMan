@@ -21,14 +21,34 @@ void initAudioEventScheduling(int rhythmsSize) {
 	heapInit(&audioEventMessageHeap, sizeof(AudioEventMessage), AEM_HEAPSIZE, compareAudioEventMessages, 0);
 	rhythms = calloc(max(1, rhythmsSize), sizeof(BitSet));
 	rhythmMax = rhythmsSize;
-	addRhythm(4, 0b1111);
+	addRhythm(0b1111, 4);
 }
 
-int addRhythm(int length, uint64_t pattern) {
+void setRhythmCommand(int event, uint64_t pattern, size_t size) {
+	addAudioCommand(6, event, &pattern, size);
+}
+
+void setRhythm(int event, uint64_t pattern, size_t size) {
+	if (event < scheduler->eventNum && event >= 0) {
+		BitSet *bs = addRhythm(pattern, size);
+		if (bs) {
+			AudioEvent *ae = &scheduler->events[event];
+			ae->rhythm = bs;
+		}
+	}
+}
+
+BitSet *addRhythm(uint64_t pattern, int length) {
 	if (rhythmCur < rhythmMax) {
-		bitsetInit(rhythms, length);
+		printf("adding new rhythm length: %i\n", length);
+		bitsetInit(&rhythms[rhythmCur], length);
 		bitsetSetUInt64(&rhythms[rhythmCur], pattern);
+		BitSet *bs = &rhythms[rhythmCur];
+		printf("bitCount %i\n", bs->bitCount);
 		rhythmCur++;
+		return &rhythms[rhythmCur-1];
+	} else {
+		return NULL;
 	}
 }
 
