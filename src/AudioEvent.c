@@ -24,8 +24,9 @@ void initAudioEventScheduling(int rhythmsSize) {
 	addRhythm(0b1111, 4);
 }
 
-void setRhythmCommand(int event, uint64_t pattern, size_t size) {
-	addAudioCommand(6, event, &pattern, size);
+void setRhythmCommand(int event, uint64_t pattern, size_t bitCount) {
+	//concatenate pattern and bitCount and send that buffer with sizeof(uint64_t) + sizeof(aize_t)
+	addAudioCommand(6, event, &pattern, sizeof(pattern));
 }
 
 void setRhythm(int event, uint64_t pattern, size_t size) {

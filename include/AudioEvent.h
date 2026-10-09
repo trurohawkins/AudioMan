@@ -40,7 +40,7 @@ void unscheduleEvents(int start);
 void removeAudioEvents(int start);
 void setPauseOnEvent(int event, bool state);
 void setPauseOnEvents(bool state, long long bufferStart);
-void setRhythmCommand(int event, uint64_t pattern, size_t size);
+void setRhythmCommand(int event, uint64_t pattern, size_t bitCount);
 void setRhythm(int event, uint64_t pattern, size_t size);
 BitSet *addRhythm(uint64_t pattern, int length);
 

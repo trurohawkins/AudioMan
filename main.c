@@ -69,8 +69,8 @@ int main() {
 	int event = scheduleEvent(specialSound, 0, 2.0);
 	printf("scheduled event %i\n", event);
 	event = scheduleEvent(foopy, 0, 4  * 0.3);
-	uint64_t rhythm = 0b1001;
-	setRhythmCommand(event, rhythm, 4);
+	uint64_t rhythm = (1ULL << 56) - 1;
+	setRhythmCommand(event, rhythm, 64);
 	lastTime = lastTime1 = nowMS();
 	char buff[32];
 	bool eventPaused = false;
