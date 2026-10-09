@@ -207,9 +207,11 @@ void checkAudioCommands(long long currentFrame) {
 			}
 			*/
 			uint64_t pattern;
-			memcpy(&pattern, ac.data, ac.size);
+			memcpy(&pattern, ac.data, sizeof(uint64_t));
+			size_t size;
+			memcpy(&size, ac.data + sizeof(uint64_t), sizeof(size_t));
 			//BitSet *bs = addRhythm(pattern, ac.size);
-			setRhythm(ac.obj, pattern, ac.size);
+			setRhythm(ac.obj, pattern, size);
 		} else if (ac.cmd == 7) {
 			Sound *s = &sounds->bank[ac.obj];
 			memcpy(&s->volume, ac.data, sizeof(double));

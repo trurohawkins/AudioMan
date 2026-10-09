@@ -26,7 +26,10 @@ void initAudioEventScheduling(int rhythmsSize) {
 
 void setRhythmCommand(int event, uint64_t pattern, size_t bitCount) {
 	//concatenate pattern and bitCount and send that buffer with sizeof(uint64_t) + sizeof(aize_t)
-	addAudioCommand(6, event, &pattern, sizeof(pattern));
+	uint8_t buffer[sizeof(uint64_t) + sizeof(size_t)];
+	memcpy(buffer, &pattern, sizeof(uint64_t));
+	memcpy(buffer + sizeof(uint64_t), &bitCount, sizeof(size_t));
+	addAudioCommand(6, event, &buffer, sizeof(uint64_t) + sizeof(size_t));
 }
 
 void setRhythm(int event, uint64_t pattern, size_t size) {
@@ -40,12 +43,15 @@ void setRhythm(int event, uint64_t pattern, size_t size) {
 }
 
 BitSet *addRhythm(uint64_t pattern, int length) {
+	for (int i = 0; i < rhythmCur; i++) {
+		if (rhythms[i].bitCount == length && *rhythms[i].words == pattern) {
+			return &rhythms[i];
+		}
+	}
 	if (rhythmCur < rhythmMax) {
-		printf("adding new rhythm length: %i\n", length);
 		bitsetInit(&rhythms[rhythmCur], length);
 		bitsetSetUInt64(&rhythms[rhythmCur], pattern);
 		BitSet *bs = &rhythms[rhythmCur];
-		printf("bitCount %i\n", bs->bitCount);
 		rhythmCur++;
 		return &rhythms[rhythmCur-1];
 	} else {

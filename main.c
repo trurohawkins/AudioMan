@@ -66,10 +66,13 @@ int main() {
 	//scheduleAudio(sound1, frequency);
 	double f2 = 2.0;
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
-	int event = scheduleEvent(specialSound, 0, 2.0);
+	//int event = scheduleEvent(specialSound, 0, 2.0);
+	int event = scheduleEvent(foopy, 0, 4  * 0.3);
 	printf("scheduled event %i\n", event);
-	event = scheduleEvent(foopy, 0, 4  * 0.3);
 	uint64_t rhythm = (1ULL << 56) - 1;
+	setRhythmCommand(event, rhythm, 64);
+	event = scheduleEvent(specialSound, 0, 4 * 0.3);
+	//rhythm = ~rhythm;
 	setRhythmCommand(event, rhythm, 64);
 	lastTime = lastTime1 = nowMS();
 	char buff[32];
