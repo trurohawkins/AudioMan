@@ -3,17 +3,24 @@ SoundBank *sounds = 0;
 int processAudioFile(char *file, bool loop) {
 	//linkedList *cur = aMan->sounds;
 	int fileLen = strlen(file);
+	/*
 	for (int i = 0; i < sounds->soundNum; i++) {
 		Sound s = sounds->bank[i];
+		char buff[100];
+		sprintf(buff, "comparing %s len: %i, and %s len: %i\n", s.file, strlen(s.file), file, fileLen);
+		debugWrite(buff);
 		if (memcmp(s.file, file, fileLen) == 0) {
 			//printf("already have the sound\n");
 			return i;
 		}
 	}
+	*/
 	SNDFILE *infile = 0;
 	SF_INFO sfinfo = {0};
 	if (!(infile = sf_open(file, SFM_READ, &sfinfo))) {
-		//printf ("Not able to open input file %s.\n", file) ;
+		char buff[100];
+		sprintf (buff, "Not able to open input file %s.\n", file) ;
+		debugWrite(buff);
 		sf_perror (NULL) ;
 		return  0 ;
 	}

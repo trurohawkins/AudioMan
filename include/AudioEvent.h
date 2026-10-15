@@ -3,8 +3,8 @@
 
 // audio thread side
 typedef struct {
-	int type;
-	int obj; //reference to cllaback in eventManifest or sound in soundbank
+	int sound;
+	int obj; //reference to cllaback in eventManifest
 
 	long long nextTriggerFrame;
 	bool paused;
@@ -34,8 +34,8 @@ typedef struct {
 } AudioEventMessage;
 
 void initAudioEventScheduling(int rhythmsSize);
-int scheduleEvent(void (*func)(void*), void *data, double frequency);
-bool addAudioEvent(int type, int data, double frequency);
+int scheduleEvent(int sound, void (*func)(void*), void *data, double frequency);
+bool addAudioEvent(int sound, int callback, double frequency);
 void unscheduleEvents(int start);
 void removeAudioEvents(int start);
 void setPauseOnEvent(int event, bool state);

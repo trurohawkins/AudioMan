@@ -102,6 +102,16 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 		if (!s) {
 			continue;
 		}
+		char msg[160];
+
+		snprintf(msg, sizeof(msg),
+						 "sound=%p buff=%p totalFrames=%ld readFrames=%ld\n",
+						 (void *)s,
+						 (void *)s->buff,
+						 s->totalFrames,
+						 vo->readFrames);
+
+		debugWrite(msg);
 		// mixing
 		long startFrame = vo->bufferOffset;
 		long framesAvailable = framesPerBuffer - startFrame;
@@ -115,9 +125,12 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 				vo->readFrames = 0;
 			}
 		}
-		long framesToMix = remaining < framesPerBuffer ? remaining : framesAvailable;
+		long framesToMix = remaining < framesAvailable ? remaining : framesAvailable;
 		long sampleOffset = vo->readFrames * 2;
 		float volume = a->volumes[s->volGroup] * s->volume;
+		char buff[100];
+		sprintf(buff, "volume: %f framesToMix: %i\n", volume, framesToMix);
+		debugWrite(buff);
 		/*
 		for (long i = 0; i < framesToMix * 2; i++) {
 			long buffIndex = sampleOffset + i;
@@ -147,7 +160,25 @@ static int paLibsndfileCb(const void *inputBuffer, void *outputBuffer,
 	}
 
 	a->currentFrame += framesPerBuffer;
+	float peak = 0.0f;
+	double sumSquares = 0.0;
 
+	for (unsigned long i = 0; i < framesPerBuffer * 2; i++) {
+			float sample = out[i];
+
+			if (fabsf(sample) > peak) {
+					peak = fabsf(sample);
+			}
+
+			sumSquares += (double)sample * sample;
+	}
+
+	double rms = sqrt(sumSquares / (framesPerBuffer * 2));
+
+	char msg[128];
+	snprintf(msg, sizeof(msg),
+					 "OUTPUT peak=%f rms=%f\n", peak, rms);
+	debugWrite(msg);
 	return paContinue;
 }
 
@@ -159,22 +190,26 @@ void checkAudioCommands(long long currentFrame) {
 			for (int i = 0; i < VOICE_MAX; i++) {
 				if (aMan->mix[i].sound == NULL) {
 					Sound *s = &sounds->bank[ac.obj];
+					/*
 					if (ac.size != 0) {
 						s->loop = false;
 						double frequency;
 						memcpy(&frequency, ac.data, sizeof(double));
 						addAudioEvent(1, ac.obj, frequency);
 					} else {
-						aMan->mix[i].sound = s;
-						aMan->mix[i].readFrames = 0;
-					}
+					*/
+					aMan->mix[i].sound = s;
+					aMan->mix[i].readFrames = 0;
+					//}
 					break;
 				}
 			}
 		} else if(ac.cmd == 1) {
+			int sound;
+			memcpy(&sound, ac.data, sizeof(int));
 			double frequency;
-			memcpy(&frequency, ac.data, sizeof(double));
-			addAudioEvent(2, ac.obj, frequency);
+			memcpy(&frequency, ac.data + sizeof(int), sizeof(double));
+			addAudioEvent(sound, ac.obj, frequency);
 		} else if (ac.cmd == 2) {
 			Sound *s = &sounds->bank[ac.obj];
 			for (int i = 0; i < VOICE_MAX; i++) {

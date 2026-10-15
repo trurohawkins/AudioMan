@@ -18,6 +18,10 @@ int curEvent = 0;
 
 void initAudioEventScheduling(int rhythmsSize) {
 	scheduler = calloc(1, sizeof(AudioEventScheduler));
+	// initalize empty soun value to represent unused event space
+	for (int i = 0; i < AUDIO_EVENT_MAX; i++) {
+		scheduler->events[i].obj = -1;
+	}
 	heapInit(&audioEventMessageHeap, sizeof(AudioEventMessage), AEM_HEAPSIZE, compareAudioEventMessages, 0);
 	rhythms = calloc(max(1, rhythmsSize), sizeof(BitSet));
 	rhythmMax = rhythmsSize;
@@ -59,35 +63,40 @@ BitSet *addRhythm(uint64_t pattern, int length) {
 	}
 }
 
-int scheduleEvent(void (*func)(void*), void *data, double frequency) {
+int scheduleEvent(int sound, void (*func)(void*), void *data, double frequency) {
 	if (curEvent < AUDIO_EVENT_MAX) {
 		eventManifest[curEvent].func = func;
 		eventManifest[curEvent].data = data;
-		addAudioCommand(1, curEvent, &frequency, sizeof(double));
+		uint8_t buffer[sizeof(int) + sizeof(frequency)];
+		memcpy(buffer, &sound, sizeof(int));
+		memcpy(buffer + sizeof(int), &frequency, sizeof(double));
+
+		addAudioCommand(1, curEvent, buffer, sizeof(int) + sizeof(double));
 		curEvent++;
 	}
 	return curEvent - 1;
 }
 
-bool addAudioEvent(int type, int obj, double frequency) {
-	if (obj < 0 ||  obj > AUDIO_EVENT_MAX) {
+bool addAudioEvent(int sound, int callback, double frequency) {
+	if (callback < 0 ||  callback > AUDIO_EVENT_MAX) {
 		// we need to check if there are AUDIO_EVENT_MAX events happening, 
 		//if not we want to reorder them downwards and adjust scheduler->eventNum
 		// if there are, we return false
 		return false;
 	}
-	if (scheduler->events[obj].type == 0) {
+	printf("adding audio event sound %i, callback %i\n", sound, callback);
+	if (scheduler->events[callback].obj == -1) {
 		AudioEvent ae;
-		ae.type = type;
+		ae.sound = sound;
 		// every event should have unique obj position, given by the manifest
-		ae.obj = obj;
+		ae.obj = callback;
 		ae.paused = false;
 		ae.intervalFrames = (long long)((frequency / (aMan->bpm/60.0)) * aMan->sampleRate);
 		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
 		ae.rhythm = &rhythms[0];
-		scheduler->events[obj] = ae;
-		if (obj >= scheduler->eventNum) {
-			scheduler->eventNum = obj+1;
+		scheduler->events[callback] = ae;
+		if (callback >= scheduler->eventNum) {
+			scheduler->eventNum = callback+1;
 		}
 		return true;
 	} else {
@@ -111,7 +120,7 @@ void removeAudioEvents(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
 		for (int i = event; i < AUDIO_EVENT_MAX; i++) {
 			AudioEvent *ae = &scheduler->events[i];
-			ae->type = 0;
+			ae->sound = -1;
 			ae->obj = -1;
 		}
 	}
@@ -121,7 +130,7 @@ void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCa
 	if (!scheduler->paused) {
 		for (int i = 0; i < scheduler->eventNum; i++) {
 			AudioEvent *ae = &scheduler->events[i];
-			if (ae->type != 0) {
+			if (ae->obj >= 0) {
 				// maybe remove 1st check so we can catch up if neede
 				// currently we will drop it if its too far behind
 				//printf("      event %i triggerFrame %lld\n", i, ae->nextTriggerFrame);
@@ -132,18 +141,17 @@ void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCa
 							//how far into audio buffer did the event occur?
 							long long offset = triggerFrame - bufferStart;
 							//printf("Audio event: frame=%lld offset=%lld\n", triggerFrame, offset);
-								if (ae->type == 1) {
+								if (ae->sound >= 0) {
 									if (!spawnVoice(ae, bufferStart, bufferEnd)) {
 										break;
 									}
-								} else {
-									AudioEventMessage aem = {
-										.data = ae->obj,
-										.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
-									};
-									// push to signal to main thread to execute event
-									AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
 								}
+								AudioEventMessage aem = {
+									.data = ae->obj,
+									.eventTime = timeInfo->outputBufferDacTime + (double)offset / aMan->sampleRate,
+								};
+								// push to signal to main thread to execute event
+								AudioEventMessageQueue_aqPush(&audioEventQueue, aem); 
 							}
 							// set the next trigger event time
 							ae->nextTriggerFrame += ae->intervalFrames;
@@ -158,7 +166,7 @@ void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCa
 
 
 bool spawnVoice(AudioEvent *ae, long long bufferStart, long long bufferEnd) {
-	Sound *s = &sounds->bank[ae->obj];
+	Sound *s = &sounds->bank[ae->sound];
 	int mixSpot = 0;
 	Voice *vo = NULL;//findFreeMixSpot();
 	for (;mixSpot < VOICE_MAX; mixSpot++) {
@@ -195,7 +203,7 @@ void setPauseOnEvents(bool state, long long bufferStart) {
 			scheduler->paused = false;
 			for (int i = 0; i < scheduler->eventNum; i++) {
 				AudioEvent *ae = &scheduler->events[i];
-				if (ae->type != 0) {// && ae->data != 0) {
+				if (ae->obj >= 0) {// && ae->data != 0) {
 					ae->nextTriggerFrame = bufferStart + (ae->nextTriggerFrame - scheduler->pauseFrame);
 				}
 			}

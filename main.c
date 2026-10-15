@@ -32,17 +32,6 @@ void specialSound(void *sound) {
 	//elapsed[count] = now - lastTime;
 	//count++;
 	lastTime = now;
-	/*
-	int *s0 = sound;
-	playAudio(*s0);
-	if (!poo) {
-		pauseAudioEvent(volEvent);
-		poo = true;
-	} else {
-		unpauseAudioEvent(volEvent);
-		poo = false;
-	}
-	*/
 }
 
 void foopy(void *ound) {
@@ -58,7 +47,7 @@ int main() {
 	int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
 	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
-	//int sound0 = processAudioFile("sounds/a1.wav", false);
+	int sound0 = processAudioFile("../../resources/Baboop.wav", false);
 	//playAudio(sound0);
 	//int sound1 = processAudioFile("sounds/a2.wav", false);
 
@@ -67,13 +56,13 @@ int main() {
 	double f2 = 2.0;
 	//volEvent = scheduleEvent(lowerVolume, &sound1, f2);
 	//int event = scheduleEvent(specialSound, 0, 2.0);
-	int event = scheduleEvent(foopy, 0, 4  * 0.3);
+	int event = scheduleEvent(-1, specialSound, 0, 4);
 	printf("scheduled event %i\n", event);
 	uint64_t rhythm = (1ULL << 56) - 1;
 	setRhythmCommand(event, rhythm, 64);
-	event = scheduleEvent(specialSound, 0, 4 * 0.3);
+	int event2 = scheduleEvent(sound0, foopy, 0, 1);
 	//rhythm = ~rhythm;
-	setRhythmCommand(event, rhythm, 64);
+	//setRhythmCommand(event, rhythm, 64);
 	lastTime = lastTime1 = nowMS();
 	char buff[32];
 	bool eventPaused = false;
