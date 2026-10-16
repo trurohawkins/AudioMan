@@ -71,15 +71,11 @@ int main() {
 		ssize_t r = read(STDIN_FILENO, buff, sizeof(buff));
 		if (r >= 1) {
 			eventPaused = !eventPaused;
-			pauseAudioEvents(eventPaused);
+			setMute(sound0, eventPaused);
 			/*
-			if (eventPaused) {
-				pauseAudioEvent(event);
-			} else {
-				unpauseAudioEvent(event);
-			}
+			eventPaused = !eventPaused;
+			pauseAudioEvents(eventPaused);
 			*/
-			//printf("event: %i at %" PRIu64 "\n", eventPaused, nowMS());
 		}
 		parseAudioEvents();
 	}

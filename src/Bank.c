@@ -59,20 +59,6 @@ void stopAudio(int sound) {
 	}
 }
 
-void scheduleAudio(int sound, double frequency) {
-	if (sound >= 0 && sound < sounds->soundNum) {
-		addAudioCommand(0, sound, &frequency, sizeof(double));
-	}
-}
-
-void unScheduleAudio(int sound) {
-	if (sound >= 0 && sound < sounds->soundNum) {
-		// 1 indicates sound rather than event
-		addAudioCommand(3, sound, 0, 0);
-	}
-}
-
-
 void pauseAudioEvent(int event, bool state) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
 		addAudioCommand(4, event, &state, sizeof(bool));
@@ -85,6 +71,10 @@ void pauseAudioEvents(bool pause) {
 
 void setVolume(int sound, double volume) {
 	addAudioCommand(7, sound, &volume, sizeof(double));
+}
+
+void setMute(int sound, bool state) {
+	addAudioCommand(8, sound, &state, sizeof(bool));
 }
 
 void addAudioCommand(int cmd, int obj, void *data, uint16_t size) {

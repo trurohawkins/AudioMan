@@ -16,6 +16,7 @@ typedef struct Sound {
 	bool loop;
 	float volume;
 	int volGroup;
+	bool muted;
 
 	//only audio thread controls
 	bool active;
@@ -41,8 +42,7 @@ void addAudioCommand(int cmd, int obj, void *data, uint16_t size);
 
 void playAudio(int sound);
 void stopAudio(int sound);
-void scheduleAudio(int sound, double frequency);
-void unScheduleAudio(int sound);
+void setMute(int sound, bool state);
 void pauseAudioEvent(int event, bool pause);
 void pauseAudioEvents(bool pause);
 

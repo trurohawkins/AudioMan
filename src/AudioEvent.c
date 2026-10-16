@@ -84,7 +84,6 @@ bool addAudioEvent(int sound, int callback, double frequency) {
 		// if there are, we return false
 		return false;
 	}
-	printf("adding audio event sound %i, callback %i\n", sound, callback);
 	if (scheduler->events[callback].obj == -1) {
 		AudioEvent ae;
 		ae.sound = sound;
