@@ -231,6 +231,8 @@ void checkAudioCommands(long long currentFrame) {
 		} else if (ac.cmd == 8) {
 			Sound *s = &sounds->bank[ac.obj];
 			memcpy(&s->muted, ac.data, sizeof(bool));
+		} else if (ac.cmd == 9) {
+			setSound(ac.obj, *ac.data);
 		}
 	}
 }
@@ -268,7 +270,7 @@ int addVolGroup() {
 	}
 }
 void changeVolGroup(Sound *s, int group) {
-	s->volume = group;
+	s->volGroup = group;
 }
 
 void endAudio() {

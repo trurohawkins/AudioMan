@@ -43,6 +43,7 @@ void setPauseOnEvents(bool state, long long bufferStart);
 void setRhythmCommand(int event, uint64_t pattern, size_t bitCount);
 void setRhythm(int event, uint64_t pattern, size_t size);
 BitSet *addRhythm(uint64_t pattern, int length);
+void setSound(int event, int sound);
 
 void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCallbackTimeInfo *timeInfo);
 

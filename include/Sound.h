@@ -45,7 +45,7 @@ void stopAudio(int sound);
 void setMute(int sound, bool state);
 void pauseAudioEvent(int event, bool pause);
 void pauseAudioEvents(bool pause);
-
+void setSoundOnEvent(int event, int sound);
 void setVolume(int sound, double volume);
 
 void freeSound(void *snd);

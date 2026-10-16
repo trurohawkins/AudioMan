@@ -67,11 +67,17 @@ int main() {
 	char buff[32];
 	bool eventPaused = false;
 	uint64_t pauseTime;
+	int grr = processAudioFile("../../resources/grrr.wav", false);
 	while (running) {
 		ssize_t r = read(STDIN_FILENO, buff, sizeof(buff));
 		if (r >= 1) {
 			eventPaused = !eventPaused;
-			setMute(sound0, eventPaused);
+			//setMute(sound0, eventPaused);
+			if (eventPaused) {
+				setSoundOnEvent(event2, grr);
+			} else {
+				setSoundOnEvent(event2, sound0);
+			}
 			/*
 			eventPaused = !eventPaused;
 			pauseAudioEvents(eventPaused);

@@ -104,6 +104,18 @@ bool addAudioEvent(int sound, int callback, double frequency) {
 	}
 }
 
+void setSoundOnEvent(int event, int sound) {
+	addAudioCommand(9, event, &sound, sizeof(int));
+}
+
+void setSound(int event, int sound) {
+	if (event < scheduler->eventNum && event >= 0) {
+		AudioEvent *ae = &scheduler->events[event];
+		ae->sound = sound;
+	}
+}
+
+
 //called on all events passed this event
 void unscheduleEvents(int event) {
 	if (event >= 0 && event < AUDIO_EVENT_MAX) {
