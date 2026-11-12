@@ -77,7 +77,7 @@ int scheduleEvent(int sound, void (*func)(void*), void *data, double frequency) 
 	return curEvent - 1;
 }
 
-bool addAudioEvent(int sound, int callback, double frequency) {
+bool addAudioEvent(int sound, int callback, double beatMultiplier) {
 	if (callback < 0 ||  callback > AUDIO_EVENT_MAX) {
 		// we need to check if there are AUDIO_EVENT_MAX events happening, 
 		//if not we want to reorder them downwards and adjust scheduler->eventNum
@@ -90,7 +90,7 @@ bool addAudioEvent(int sound, int callback, double frequency) {
 		// every event should have unique obj position, given by the manifest
 		ae.obj = callback;
 		ae.paused = false;
-		ae.intervalFrames = (long long)((frequency / (aMan->bpm/60.0)) * aMan->sampleRate);
+		ae.intervalFrames = (long long)((beatMultiplier / (aMan->bpm/60.0)) * aMan->sampleRate);
 		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
 		ae.rhythm = &rhythms[0];
 		scheduler->events[callback] = ae;

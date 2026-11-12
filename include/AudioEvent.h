@@ -35,7 +35,7 @@ typedef struct {
 
 void initAudioEventScheduling(int rhythmsSize);
 int scheduleEvent(int sound, void (*func)(void*), void *data, double frequency);
-bool addAudioEvent(int sound, int callback, double frequency);
+bool addAudioEvent(int sound, int callback, double beatMultiplier);
 void unscheduleEvents(int start);
 void removeAudioEvents(int start);
 void setPauseOnEvent(int event, bool state);
