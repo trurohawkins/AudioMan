@@ -91,6 +91,11 @@ bool addAudioEvent(int sound, int callback, double beatMultiplier) {
 		ae.obj = callback;
 		ae.paused = false;
 		ae.intervalFrames = (long long)((beatMultiplier / (aMan->bpm/60.0)) * aMan->sampleRate);
+		/*
+		char buff[100];
+		sprintf(buff, "EVENTADDED #%i\n  currentFrame: %lld\n  intervalFrames: %lld\n  step: %i\n", sound, aMan->currentFrame, ae.intervalFrames, ae.step);
+		debugWrite(buff);
+		*/
 		ae.nextTriggerFrame = aMan->currentFrame + ae.intervalFrames;
 		ae.rhythm = &rhythms[0];
 		scheduler->events[callback] = ae;
@@ -139,6 +144,11 @@ void removeAudioEvents(int event) {
 
 void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCallbackTimeInfo *timeInfo) {
 	if (!scheduler->paused) {
+		/*
+		char buff[100];
+		sprintf(buff, "checking scheduler: %lld - %lld\n", bufferStart, bufferEnd);
+		debugWrite(buff);
+		*/
 		for (int i = 0; i < scheduler->eventNum; i++) {
 			AudioEvent *ae = &scheduler->events[i];
 			if (ae->obj >= 0) {
@@ -148,6 +158,8 @@ void checkScheduler(long long bufferStart, long long bufferEnd, const PaStreamCa
 				if (ae->nextTriggerFrame >= bufferStart) {
 					while (ae->nextTriggerFrame < bufferEnd) {
 						if (!ae->paused && bitsetGet(ae->rhythm, ae->step)) {
+							//sprintf(buff, "  triggering audio event\n    sound: %i obj: %i\n", ae->sound, ae->obj);
+							//debugWrite(buff);
 							long long triggerFrame = ae->nextTriggerFrame;
 							//how far into audio buffer did the event occur?
 							long long offset = triggerFrame - bufferStart;
